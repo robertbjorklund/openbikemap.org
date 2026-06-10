@@ -1,15 +1,35 @@
 import { MapStyle } from "../MapStyle";
 import { MapMarker } from "../MapMarker";
-import { TrailCategory } from "../types/TrailTypes";
+import {
+  BikeActivity,
+  type MtbScaleFilter,
+  RoutePavedBucket,
+} from "../types/BikeActivity";
+import type { MapFeature } from "../types/FeatureTypes";
+import type { ObjectIDType } from "./SelectedObject";
+
+export interface ShowInfoOptions {
+  idType?: ObjectIDType;
+  clickedFeature?: MapFeature;
+  relatedFeatures?: MapFeature[];
+}
 
 export default interface EventBus {
   openSidebar(): void;
   closeSidebar(): void;
+  closeMenu(): void;
+  backToMenu(): void;
   openAboutInfo(): void;
   closeAboutInfo(): void;
+  openLayers(): void;
+  closeLayers(): void;
+  toggleLayers(): void;
   setMapStyle(style: MapStyle): void;
-  toggleTrailCategory(category: TrailCategory): void;
-  showInfo(id: string, idType?: import("../AppConfig").ObjectIDType): void;
+  toggleActivity(activity: BikeActivity): void;
+  toggleMtbScale(scale: MtbScaleFilter): void;
+  setMinTrailLength(meters: number): void;
+  toggleRoutePavedBucket(bucket: RoutePavedBucket): void;
+  showInfo(id: string, options?: ShowInfoOptions): void;
   hideInfo(): void;
   addMarker(marker: MapMarker): void;
 }
