@@ -13,6 +13,7 @@ dist/
 
 # Environment
 .env
+.env.local
 
 # Yarn
 .yarn/*

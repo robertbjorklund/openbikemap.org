@@ -9,9 +9,9 @@ Like OpenSkiMap, the full system is split across several components:
 | Component | Status | Role |
 |-----------|--------|------|
 | **Frontend** (this repo) | In progress | React SPA with MapLibre |
-| **Data processor** | Planned | OSM → MVT + GeoJSON |
-| **REST API** | Planned | Search + feature details |
-| **Tile server** | Planned | MapLibre styles + vector tiles |
+| **Data processor** | Available | OSM → MVT + GeoJSON |
+| **REST API** | Available | Search + feature details |
+| **Tile server** | Available | MapLibre styles + vector tiles |
 
 A future [OpenHikeMap.org](https://openhikemap.org) variant can reuse the same architecture by swapping `src/AppConfig.ts` and trail type definitions.
 
@@ -29,6 +29,23 @@ yarn start
 
 The dev server runs at http://localhost:8081.
 
+### Local tiles (see bike trails on the map)
+
+```powershell
+# 1. Generate tiles + start tileserver
+cd ..\tiles.openbikemap.org
+.\scripts\dev-tiles.ps1
+
+# 2. Configure frontend
+cd ..\openbikemap.org
+copy .env.local.example .env.local
+
+# 3. Start frontend
+yarn start
+```
+
+The map loads `http://localhost:8083/styles/terrain/style.json` with Stockholm test data by default.
+
 ## Scripts
 
 - `yarn start` — development server
@@ -42,6 +59,7 @@ The dev server runs at http://localhost:8081.
 |----------|---------|-------------|
 | `VITE_API_BASE_URL` | `https://api.openbikemap.org` | REST API base URL |
 | `VITE_TILES_BASE_URL` | `https://tiles.openbikemap.org` | Tile server base URL |
+| `VITE_TILES_STYLE_PATH` | `/styles/terrain/style.json` | MapLibre style path on tileserver-gl |
 
 ## License
 
