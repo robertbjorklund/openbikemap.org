@@ -1,0 +1,53 @@
+html {
+  height: 100%;
+}
+
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+.maplibregl-ctrl-bottom-right .logo-control {
+  background: none;
+  border: none;
+  box-shadow: none;
+}
+
+.logo-control-link {
+  display: inline-block;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  text-decoration: none;
+  pointer-events: auto;
+}
+
+.logo-control-prefix {
+  font-family: sans-serif;
+  font-size: 14px;
+  color: #666;
+}
+
+.logo-control-text {
+  font-family: sans-serif;
+  font-size: 18px;
+  font-weight: bold;
+  background-image: linear-gradient(to right, #2e7d32, #1565c0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.maplibregl-ctrl-top-left {
+  z-index: 3;
+}
+
+.menu-control button {
+  font-weight: bold;
+}
