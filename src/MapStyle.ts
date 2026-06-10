@@ -7,11 +7,11 @@ export enum MapStyle {
   Bright = "bright",
 }
 
-/**
- * Basemap styles. Trail overlay layers will be added via tiles.openbikemap.org
- * once the data pipeline is ready.
- */
-export const BIKE_STYLE_URL = `${TILES_BASE_URL}/styles/terrain.json?v=${BUILD_TIMESTAMP}`;
+const TERRAIN_STYLE_PATH =
+  import.meta.env.VITE_TILES_STYLE_PATH ?? "/styles/terrain/style.json";
+
+/** OpenFreeMap basemap + bike trail/route MVT layers from tiles.openbikemap.org */
+export const BIKE_STYLE_URL = `${TILES_BASE_URL}${TERRAIN_STYLE_PATH}?v=${BUILD_TIMESTAMP}`;
 
 export const MAP_STYLE_URLS: Record<MapStyle, string> = {
   [MapStyle.Terrain]: BIKE_STYLE_URL,
