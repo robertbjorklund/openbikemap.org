@@ -1,10 +1,37 @@
-import { AppConfig, ObjectIDType } from "../AppConfig";
+import { AppConfig } from "../AppConfig";
 import { MapMarker } from "../MapMarker";
 import { MapStyle } from "../MapStyle";
-import { TrailCategory } from "../types/TrailTypes";
-import EventBus from "./EventBus";
+import {
+  BikeActivity,
+  type MtbScaleFilter,
+  RoutePavedBucket,
+} from "../types/BikeActivity";
+import type { MapFeature } from "../types/FeatureTypes";
+import { mergeSegmentGroup } from "../utils/FeatureGroup";
+import EventBus, { type ShowInfoOptions } from "./EventBus";
+import { loadGeoJSON } from "./GeoJSONLoader";
+import type { ObjectIDType } from "./SelectedObject";
+import type { SidePanelView } from "./SidePanelView";
 import State, { StateChanges } from "./State";
 import { URLState } from "./URLHistory";
+
+function buildDisplayFeature(
+  primary: MapFeature,
+  relatedFeatures: MapFeature[],
+): MapFeature {
+  if (relatedFeatures.length <= 1) {
+    return primary;
+  }
+  return mergeSegmentGroup(primary, relatedFeatures);
+}
+
+function clearedSelectionFilters(state: State) {
+  return {
+    ...state.mapFilters,
+    selectedObjectID: null,
+    selectedSegmentIds: [],
+  };
+}
 
 export default class StateReducer implements EventBus {
   _state: State;
@@ -19,49 +46,177 @@ export default class StateReducer implements EventBus {
   }
 
   openSidebar = () => {
-    this.update({ sidebarOpen: true });
+    this.setSidePanel("menu");
   };
 
   closeSidebar = () => {
-    this.update({ sidebarOpen: false });
+    this.closeMenu();
+  };
+
+  closeMenu = () => {
+    this.setSidePanel(null);
+  };
+
+  backToMenu = () => {
+    const changes: StateChanges = { sidePanelView: "menu" };
+    if (this._state.sidePanelView === "info") {
+      changes.selectedObject = null;
+      changes.mapFilters = clearedSelectionFilters(this._state);
+    }
+    this.update(changes);
   };
 
   openAboutInfo = () => {
-    this.update({ aboutInfoOpen: true });
+    this.setSidePanel("about");
   };
 
   closeAboutInfo = () => {
-    this.update({ aboutInfoOpen: false });
+    this.backToMenu();
+  };
+
+  openLayers = () => {
+    this.setSidePanel("layers");
+  };
+
+  closeLayers = () => {
+    if (this._state.sidePanelView === "layers") {
+      this.setSidePanel(null);
+    }
+  };
+
+  toggleLayers = () => {
+    if (this._state.sidePanelView === "layers") {
+      this.setSidePanel(null);
+      return;
+    }
+    this.setSidePanel("layers");
   };
 
   setMapStyle = (style: MapStyle) => {
     this.update({ mapStyle: style });
   };
 
-  toggleTrailCategory = (category: TrailCategory) => {
-    const hidden = this._state.mapFilters.hiddenCategories;
-    const hiddenCategories = hidden.includes(category)
-      ? hidden.filter((c) => c !== category)
-      : [...hidden, category];
+  toggleActivity = (activity: BikeActivity) => {
+    const hidden = this._state.mapFilters.hiddenActivities;
+    const hiddenActivities = hidden.includes(activity)
+      ? hidden.filter((a) => a !== activity)
+      : [...hidden, activity];
     this.update({
-      mapFilters: { ...this._state.mapFilters, hiddenCategories },
+      mapFilters: { ...this._state.mapFilters, hiddenActivities },
     });
   };
 
-  showInfo = (
-    id: string,
-    idType: ObjectIDType = AppConfig.defaultObjectIdType,
-  ) => {
+  toggleMtbScale = (scale: MtbScaleFilter) => {
+    const hidden = this._state.mapFilters.hiddenMtbScales;
+    const hiddenMtbScales = hidden.includes(scale)
+      ? hidden.filter((s) => s !== scale)
+      : [...hidden, scale];
     this.update({
-      selectedObject: { id, idType, showInfo: true },
-      mapFilters: { ...this._state.mapFilters, selectedObjectID: id },
+      mapFilters: { ...this._state.mapFilters, hiddenMtbScales },
     });
+  };
+
+  setMinTrailLength = (meters: number) => {
+    this.update({
+      mapFilters: {
+        ...this._state.mapFilters,
+        minTrailLengthMeters: Math.max(0, meters),
+      },
+    });
+  };
+
+  toggleRoutePavedBucket = (bucket: RoutePavedBucket) => {
+    const hidden = this._state.mapFilters.hiddenRoutePavedBuckets;
+    const hiddenRoutePavedBuckets = hidden.includes(bucket)
+      ? hidden.filter((b) => b !== bucket)
+      : [...hidden, bucket];
+    this.update({
+      mapFilters: { ...this._state.mapFilters, hiddenRoutePavedBuckets },
+    });
+  };
+
+  private loadInfoData = async (
+    id: string,
+    idType: ObjectIDType,
+    relatedFeatures: MapFeature[],
+    fallbackFeature?: MapFeature,
+  ) => {
+    try {
+      const apiFeature = await loadGeoJSON<MapFeature>(id, idType);
+      if (this._state.selectedObject?.id !== id) {
+        return;
+      }
+
+      const mergedRelated =
+        relatedFeatures.length > 1
+          ? relatedFeatures.map((feature) =>
+              feature.properties.id === id ? apiFeature : feature,
+            )
+          : [apiFeature];
+
+      this.update({
+        selectedObject: {
+          ...this._state.selectedObject,
+          feature: buildDisplayFeature(apiFeature, mergedRelated),
+        },
+        mapFilters: {
+          ...this._state.mapFilters,
+          selectedObjectID: apiFeature.properties.id,
+          selectedSegmentIds: mergedRelated.map(
+            (feature) => feature.properties.id,
+          ),
+        },
+      });
+    } catch (error) {
+      console.log(error);
+      if (fallbackFeature && this._state.selectedObject?.id === id) {
+        this.update({
+          selectedObject: {
+            ...this._state.selectedObject,
+            feature: buildDisplayFeature(fallbackFeature, relatedFeatures),
+          },
+        });
+        return;
+      }
+      this.hideInfo();
+    }
+  };
+
+  showInfo = (id: string, options?: ShowInfoOptions) => {
+    const idType = options?.idType ?? AppConfig.defaultObjectIdType;
+    const clickedFeature = options?.clickedFeature;
+    const relatedFeatures =
+      options?.relatedFeatures ??
+      (clickedFeature ? [clickedFeature] : []);
+    const segmentIds = relatedFeatures.map((feature) => feature.properties.id);
+    const displayFeature = clickedFeature
+      ? buildDisplayFeature(clickedFeature, relatedFeatures)
+      : undefined;
+
+    this.update({
+      sidePanelView: "info",
+      selectedObject: {
+        id,
+        idType,
+        showInfo: true,
+        feature: displayFeature,
+      },
+      mapFilters: {
+        ...this._state.mapFilters,
+        selectedObjectID: id,
+        selectedSegmentIds: segmentIds,
+      },
+    });
+
+    this.loadInfoData(id, idType, relatedFeatures, clickedFeature);
   };
 
   hideInfo = () => {
     this.update({
+      sidePanelView:
+        this._state.sidePanelView === "info" ? null : this._state.sidePanelView,
       selectedObject: null,
-      mapFilters: { ...this._state.mapFilters, selectedObjectID: null },
+      mapFilters: clearedSelectionFilters(this._state),
     });
   };
 
@@ -73,9 +228,18 @@ export default class StateReducer implements EventBus {
   };
 
   urlUpdate = (urlState: URLState) => {
+    const existingSelectedObjectID = this._state.selectedObject?.id ?? null;
     const showInfo = urlState.selectedObjectID ? urlState.showInfo : false;
+
+    let sidePanelView: SidePanelView = null;
+    if (urlState.aboutInfoOpen) {
+      sidePanelView = "about";
+    } else if (showInfo && urlState.selectedObjectID) {
+      sidePanelView = "info";
+    }
+
     this.update({
-      aboutInfoOpen: urlState.aboutInfoOpen,
+      sidePanelView,
       selectedObject: urlState.selectedObjectID
         ? {
             id: urlState.selectedObjectID,
@@ -90,10 +254,31 @@ export default class StateReducer implements EventBus {
           urlState.selectedObjectIDType === AppConfig.defaultObjectIdType
             ? urlState.selectedObjectID
             : null,
+        selectedSegmentIds:
+          showInfo &&
+          urlState.selectedObjectIDType === AppConfig.defaultObjectIdType &&
+          urlState.selectedObjectID
+            ? [urlState.selectedObjectID]
+            : [],
       },
       markers: urlState.markers,
     });
+
+    if (
+      urlState.selectedObjectID &&
+      urlState.selectedObjectID !== existingSelectedObjectID
+    ) {
+      this.loadInfoData(
+        urlState.selectedObjectID,
+        urlState.selectedObjectIDType,
+        [],
+      );
+    }
   };
+
+  private setSidePanel(view: SidePanelView) {
+    this.update({ sidePanelView: view });
+  }
 
   private update(changes: StateChanges): void {
     const state = this._state as unknown as Record<string, unknown>;

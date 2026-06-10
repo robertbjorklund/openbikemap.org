@@ -1,23 +1,14 @@
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import * as ReactDOM from "react-dom/client";
 import { AppConfig } from "./AppConfig";
-import { AboutModal } from "./components/AboutModal";
 import { Map } from "./components/Map";
-import Sidebar from "./components/Sidebar";
 import State, { getInitialState, StateChanges } from "./components/State";
 import StateReducer from "./components/StateReducer";
-import { Themed } from "./components/Themed";
 import { getURLState, updateURL } from "./components/URLHistory";
 import "./index.css";
 import { CameraPositionManager } from "./utils/CameraPositionManager";
 
 function initialize() {
-  const sidebarRoot = ReactDOM.createRoot(document.getElementById("sidebar")!);
-  const aboutRoot = ReactDOM.createRoot(
-    document.getElementById("about-modal")!,
-  );
-
   const store = new StateReducer(getInitialState(), update);
 
   window.addEventListener("popstate", () => {
@@ -38,16 +29,19 @@ function initialize() {
   );
 
   store.urlUpdate(getURLState());
-  update(store._state, store._state);
   map.setStyle(store._state.mapStyle);
+  map.setFilters(store._state.mapFilters);
+  map.updateSidePanel(store._state);
 
   function update(state: State, changes: StateChanges) {
     updateURL({
-      aboutInfoOpen: state.aboutInfoOpen,
+      aboutInfoOpen: state.sidePanelView === "about",
       selectedObjectID: state.selectedObject?.id ?? null,
       selectedObjectIDType:
         state.selectedObject?.idType ?? AppConfig.defaultObjectIdType,
-      showInfo: state.selectedObject?.showInfo ?? true,
+      showInfo:
+        state.sidePanelView === "info" &&
+        (state.selectedObject?.showInfo ?? false),
       markers: state.markers,
     });
 
@@ -57,26 +51,12 @@ function initialize() {
     }
 
     if (
-      changes.sidebarOpen !== undefined ||
+      changes.sidePanelView !== undefined ||
+      changes.selectedObject !== undefined ||
+      changes.mapFilters !== undefined ||
       changes.mapStyle !== undefined
     ) {
-      sidebarRoot.render(
-        <Themed>
-          <Sidebar
-            eventBus={store}
-            open={state.sidebarOpen}
-            currentMapStyle={state.mapStyle}
-          />
-        </Themed>,
-      );
-    }
-
-    if (changes.aboutInfoOpen !== undefined) {
-      aboutRoot.render(
-        <Themed>
-          <AboutModal eventBus={store} open={state.aboutInfoOpen} />
-        </Themed>,
-      );
+      map.updateSidePanel(state);
     }
 
     if (changes.selectedObject !== undefined) {
@@ -95,6 +75,8 @@ function initialize() {
       map.flyTo(changes.latestMarker.coordinates);
     }
   }
+
+  update(store._state, store._state);
 }
 
 window.addEventListener("load", initialize);

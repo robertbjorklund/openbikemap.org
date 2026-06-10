@@ -1,22 +1,34 @@
 import * as maplibregl from "maplibre-gl";
 import { throttle } from "throttle-debounce";
-import MapFilters from "../MapFilters";
+import MapFilters, { defaultMapFilters } from "../MapFilters";
 import { MapMarker } from "../MapMarker";
 import { MAP_STYLE_URLS, MapStyle } from "../MapStyle";
+import type { MapFeature } from "../types/FeatureTypes";
 import {
   CameraPosition,
   CameraPositionManager,
 } from "../utils/CameraPositionManager";
 import EventBus from "./EventBus";
+import { applyFilterRulesToMap } from "./MapFilterRules";
+import { MapInteractionManager } from "./MapInteractionManager";
 import { LogoControl } from "./LogoControl";
+import { LayersControl } from "./LayersControl";
 import { MenuControl } from "./MenuControl";
 import { SelectedObject } from "./SelectedObject";
+import { SidePanelControl } from "./SidePanelControl";
+import State from "./State";
+
+const SELECTED_SOURCE_ID = "openbikemap-selected";
+const SELECTED_LAYER_ID = "openbikemap-selected-line";
 
 export class Map {
   private map: maplibregl.Map;
   private markers: maplibregl.Marker[] = [];
   private currentStyle: MapStyle | null = null;
+  private currentFilters: MapFilters = defaultMapFilters;
   private cameraPositionManager: CameraPositionManager;
+  private sidePanelControl: SidePanelControl;
+  private selectedFeature: MapFeature | null = null;
 
   constructor(
     cameraPosition: CameraPosition,
@@ -38,7 +50,16 @@ export class Map {
       cooperativeGestures: isEmbedded,
     });
 
+    new MapInteractionManager(this.map, eventBus);
+
+    this.sidePanelControl = new SidePanelControl(
+      eventBus,
+      this.currentFilters,
+      MapStyle.Terrain,
+    );
     this.map.addControl(new MenuControl(eventBus), "top-left");
+    this.map.addControl(this.sidePanelControl);
+    this.map.addControl(new LayersControl(eventBus), "bottom-right");
     this.map.addControl(new maplibregl.NavigationControl(), "top-right");
     this.map.addControl(
       new maplibregl.ScaleControl({ maxWidth: 80 }),
@@ -80,9 +101,9 @@ export class Map {
     });
 
     this.map.on("moveend", saveCamera);
-
-    this.map.on("load", () => {
-      // Placeholder for future bike trail MVT layers from tiles.openbikemap.org
+    this.map.on("style.load", () => {
+      applyFilterRulesToMap(this.map, this.currentFilters);
+      this.updateSelectedHighlight();
     });
   }
 
@@ -94,12 +115,36 @@ export class Map {
     this.map.setStyle(MAP_STYLE_URLS[style]);
   }
 
-  setFilters(_filters: MapFilters): void {
-    // Apply MapLibre filter expressions once bike trail layers exist
+  private setFiltersUnthrottled = (filters: MapFilters) => {
+    this.currentFilters = filters;
+    this.sidePanelControl.setView(this.sidePanelControl.getView(), {
+      mapFilters: filters,
+    });
+    this.waitForStyleReady(() => {
+      applyFilterRulesToMap(this.map, this.currentFilters);
+    });
+  };
+
+  setFilters = throttle(100, this.setFiltersUnthrottled);
+
+  updateSidePanel(state: State): void {
+    this.sidePanelControl.setView(state.sidePanelView, {
+      mapFilters: state.mapFilters,
+      mapStyle: state.mapStyle,
+      infoFeature:
+        state.sidePanelView === "info" && state.selectedObject?.feature
+          ? state.selectedObject.feature
+          : null,
+    });
   }
 
-  setSelectedObject(_selectedObject: SelectedObject | null | undefined): void {
-    // Highlight selected trail once data layers are available
+  setSelectedObject(selectedObject: SelectedObject | null | undefined): void {
+    const feature =
+      selectedObject?.showInfo && selectedObject.feature
+        ? selectedObject.feature
+        : null;
+    this.selectedFeature = feature;
+    this.updateSelectedHighlight();
   }
 
   setMarkers(markers: MapMarker[]): void {
@@ -115,5 +160,53 @@ export class Map {
 
   getMaplibreMap(): maplibregl.Map {
     return this.map;
+  }
+
+  private waitForStyleReady(callback: () => void): void {
+    if (this.map.isStyleLoaded()) {
+      callback();
+      return;
+    }
+    this.map.once("style.load", callback);
+  }
+
+  private ensureSelectedHighlightLayer(): void {
+    if (!this.map.getSource(SELECTED_SOURCE_ID)) {
+      this.map.addSource(SELECTED_SOURCE_ID, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+    }
+
+    if (!this.map.getLayer(SELECTED_LAYER_ID)) {
+      this.map.addLayer({
+        id: SELECTED_LAYER_ID,
+        type: "line",
+        source: SELECTED_SOURCE_ID,
+        paint: {
+          "line-color": "#fdd835",
+          "line-width": 10,
+          "line-opacity": 0.95,
+        },
+        layout: {
+          "line-cap": "round",
+          "line-join": "round",
+        },
+      });
+    }
+  }
+
+  private updateSelectedHighlight(): void {
+    if (!this.map.isStyleLoaded()) {
+      return;
+    }
+
+    this.ensureSelectedHighlightLayer();
+
+    const source = this.map.getSource(SELECTED_SOURCE_ID) as maplibregl.GeoJSONSource;
+    source.setData({
+      type: "FeatureCollection",
+      features: this.selectedFeature ? [this.selectedFeature] : [],
+    });
   }
 }
