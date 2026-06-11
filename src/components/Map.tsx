@@ -4,6 +4,7 @@ import MapFilters, { defaultMapFilters } from "../MapFilters";
 import { MapMarker } from "../MapMarker";
 import { MAP_STYLE_URLS, MapStyle } from "../MapStyle";
 import type { MapFeature } from "../types/FeatureTypes";
+import { featuresForHighlight } from "../utils/FeatureGroup";
 import {
   CameraPosition,
   CameraPositionManager,
@@ -256,6 +257,10 @@ export class Map {
         },
       });
     }
+
+    if (this.map.getLayer(SELECTED_LAYER_ID)) {
+      this.map.moveLayer(SELECTED_LAYER_ID);
+    }
   }
 
   private updateSelectedHighlight(): void {
@@ -273,7 +278,7 @@ export class Map {
         : null;
     source.setData({
       type: "FeatureCollection",
-      features: highlightFeature ? [highlightFeature] : [],
+      features: highlightFeature ? featuresForHighlight(highlightFeature) : [],
     });
   }
 }

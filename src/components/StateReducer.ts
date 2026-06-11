@@ -157,6 +157,37 @@ export default class StateReducer implements EventBus {
     });
   };
 
+  private loadFullRelatedFeatures = async (
+    primaryId: string,
+    idType: ObjectIDType,
+    relatedFeatures: MapFeature[],
+    primaryFeature: MapFeature,
+  ): Promise<MapFeature[]> => {
+    const uniqueIds = [...new Set(relatedFeatures.map((f) => f.properties.id))];
+    if (uniqueIds.length <= 1) {
+      return [primaryFeature];
+    }
+
+    return Promise.all(
+      uniqueIds.map(async (segmentId) => {
+        if (segmentId === primaryId) {
+          return primaryFeature;
+        }
+        try {
+          return await loadGeoJSON<MapFeature>(segmentId, idType);
+        } catch {
+          const fallback = relatedFeatures.find(
+            (feature) => feature.properties.id === segmentId,
+          );
+          if (!fallback) {
+            throw new Error(`Missing segment ${segmentId}`);
+          }
+          return fallback;
+        }
+      }),
+    );
+  };
+
   private loadInfoData = async (
     id: string,
     idType: ObjectIDType,
@@ -169,17 +200,17 @@ export default class StateReducer implements EventBus {
         return;
       }
 
-      const mergedRelated =
-        relatedFeatures.length > 1
-          ? relatedFeatures.map((feature) =>
-              feature.properties.id === id ? apiFeature : feature,
-            )
-          : [apiFeature];
+      const fullRelated = await this.loadFullRelatedFeatures(
+        id,
+        idType,
+        relatedFeatures,
+        apiFeature,
+      );
 
       this.update({
         selectedObject: {
           ...this._state.selectedObject,
-          feature: buildDisplayFeature(apiFeature, mergedRelated),
+          feature: buildDisplayFeature(apiFeature, fullRelated),
         },
       });
     } catch (error) {
