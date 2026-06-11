@@ -9,7 +9,11 @@ import {
   CameraPositionManager,
 } from "../utils/CameraPositionManager";
 import EventBus from "./EventBus";
-import { applyFilterRulesToMap } from "./MapFilterRules";
+import {
+  applyFilterRulesToMap,
+  applyFiltersToStyleLayers,
+  isFeatureVisibleUnderFilters,
+} from "./MapFilterRules";
 import { applyPaintRulesToMap } from "./MapPaintRules";
 import { MapInteractionManager } from "./MapInteractionManager";
 import { EsriAttribution } from "./EsriAttribution";
@@ -138,22 +142,31 @@ export class Map {
     this.currentStyle = style;
     this.map.setStyle(MAP_STYLE_URLS[style], {
       transformStyle: (_, newStyle) => {
+        let transformed: maplibregl.StyleSpecification = newStyle;
+
         if (
-          newStyle.sources.satellite &&
-          newStyle.sources.satellite.type === "raster"
+          transformed.sources.satellite &&
+          transformed.sources.satellite.type === "raster"
         ) {
-          return {
-            ...newStyle,
+          transformed = {
+            ...transformed,
             sources: {
-              ...newStyle.sources,
+              ...transformed.sources,
               satellite: {
-                ...newStyle.sources.satellite,
+                ...transformed.sources.satellite,
                 tiles: ["satellite-filtered://{z}/{y}/{x}"],
               },
             },
           };
         }
-        return newStyle;
+
+        return {
+          ...transformed,
+          layers: applyFiltersToStyleLayers(
+            transformed.layers,
+            this.currentFilters,
+          ),
+        };
       },
     });
   }
@@ -161,9 +174,9 @@ export class Map {
   private setFiltersUnthrottled = (filters: MapFilters) => {
     this.currentFilters = filters;
     this.sidePanelControl.updateMapFilters(filters);
+    this.updateSelectedHighlight();
     this.waitForStyleReady(() => {
-      applyPaintRulesToMap(this.map);
-      applyFilterRulesToMap(this.map, this.currentFilters);
+      applyFilterRulesToMap(this.map, filters);
     });
   };
 
@@ -253,9 +266,14 @@ export class Map {
     this.ensureSelectedHighlightLayer();
 
     const source = this.map.getSource(SELECTED_SOURCE_ID) as maplibregl.GeoJSONSource;
+    const highlightFeature =
+      this.selectedFeature &&
+      isFeatureVisibleUnderFilters(this.selectedFeature, this.currentFilters)
+        ? this.selectedFeature
+        : null;
     source.setData({
       type: "FeatureCollection",
-      features: this.selectedFeature ? [this.selectedFeature] : [],
+      features: highlightFeature ? [highlightFeature] : [],
     });
   }
 }

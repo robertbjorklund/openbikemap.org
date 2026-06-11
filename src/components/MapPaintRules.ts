@@ -1,6 +1,6 @@
 import * as maplibregl from "maplibre-gl";
 import { MTB_TRAIL_LINE_COLOR_EXPRESSION } from "../types/MtbTrailColors";
-import { ROUTE_PAVED_LINE_COLOR_EXPRESSION } from "../types/RoutePavedColors";
+import { ROUTE_NETWORK_LINE_COLOR_EXPRESSION } from "../types/RouteNetwork";
 
 const TRAIL_LINE_LAYERS = ["trails", "trails-label"] as const;
 const ROUTE_LINE_LAYERS = ["routes", "routes-label"] as const;
@@ -13,7 +13,7 @@ function trailLineColor(): maplibregl.ExpressionSpecification {
 
 function routeLineColor(): maplibregl.ExpressionSpecification {
   return JSON.parse(
-    JSON.stringify(ROUTE_PAVED_LINE_COLOR_EXPRESSION),
+    JSON.stringify(ROUTE_NETWORK_LINE_COLOR_EXPRESSION),
   ) as maplibregl.ExpressionSpecification;
 }
 
