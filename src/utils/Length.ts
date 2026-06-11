@@ -1,4 +1,8 @@
 import type { LineString, MultiLineString, Position } from "geojson";
+import {
+  distanceText,
+  type UnitSystem,
+} from "../components/utils/UnitHelpers";
 import { FeatureType, type MapFeature } from "../types/FeatureTypes";
 
 const EARTH_RADIUS_M = 6371008.8;
@@ -38,14 +42,14 @@ export function geometryLengthMeters(
   );
 }
 
-export function formatLength(meters: number | null): string | null {
+export function formatLength(
+  meters: number | null,
+  unitSystem: UnitSystem,
+): string | null {
   if (meters === null || meters <= 0) {
     return null;
   }
-  if (meters >= 1000) {
-    return `${(meters / 1000).toFixed(1)} km`;
-  }
-  return `${meters} m`;
+  return distanceText({ distanceInMeters: meters, unitSystem });
 }
 
 export function getFeatureLengthMeters(feature: MapFeature): number | null {

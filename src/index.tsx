@@ -6,9 +6,11 @@ import State, { getInitialState, StateChanges } from "./components/State";
 import StateReducer from "./components/StateReducer";
 import { getURLState, updateURL } from "./components/URLHistory";
 import "./index.css";
+import { applyUiTheme } from "./uiTheme";
 import { CameraPositionManager } from "./utils/CameraPositionManager";
 
 function initialize() {
+  applyUiTheme();
   const store = new StateReducer(getInitialState(), update);
 
   window.addEventListener("popstate", () => {
@@ -40,7 +42,7 @@ function initialize() {
       selectedObjectIDType:
         state.selectedObject?.idType ?? AppConfig.defaultObjectIdType,
       showInfo:
-        state.sidePanelView === "info" &&
+        state.sidePanelView === "route" &&
         (state.selectedObject?.showInfo ?? false),
       markers: state.markers,
     });

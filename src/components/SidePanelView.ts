@@ -1,1 +1,10 @@
-export type SidePanelView = "menu" | "layers" | "info" | "about" | null;
+export type SidePanelView =
+  | "mapLayers"
+  | "filter"
+  | "route"
+  | "settings"
+  | "credits"
+  | "about"
+  | null;
+
+export type SidePanelNavView = Exclude<SidePanelView, null>;

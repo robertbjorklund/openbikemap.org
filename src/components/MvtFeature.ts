@@ -58,6 +58,7 @@ export function mapFeatureFromMvt(
       distance: null,
       roundtrip: null,
       pavedRatio: asNumber(feature.properties.pavedRatio),
+      elevationProfile: null,
       status: Status.Operating,
       sources: osmId
         ? [{ type: SourceType.OpenStreetMap, id: osmId }]
@@ -91,6 +92,7 @@ export function mapFeatureFromMvt(
       oneway: null,
       network: asString(feature.properties.network),
       lengthMeters: asNumber(feature.properties.lengthMeters),
+      elevationProfile: null,
       status: Status.Operating,
       sources: [],
     };

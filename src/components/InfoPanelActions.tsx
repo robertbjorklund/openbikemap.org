@@ -2,7 +2,6 @@ import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import { Box } from "@mui/material";
 import * as React from "react";
-import { AppConfig } from "../AppConfig";
 import { FeatureType, type MapFeature } from "../types/FeatureTypes";
 import {
   canExportFeatureGpx,
@@ -31,16 +30,16 @@ export const InfoPanelActions: React.FunctionComponent<{
     <Box
       sx={{
         display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "space-around",
+        flexWrap: "wrap",
+        alignItems: "center",
         gap: 1,
+        py: 0.5,
       }}
     >
       <PanelActionButton
         label="Download GPX"
         icon={<DownloadIcon />}
         disabled={!canDownload}
-        color={AppConfig.primaryColor}
         onClick={() => downloadFeatureGpx(feature)}
       />
       <FeatureShareMenu

@@ -13,7 +13,9 @@ import { loadGeoJSON } from "./GeoJSONLoader";
 import type { ObjectIDType } from "./SelectedObject";
 import type { SidePanelView } from "./SidePanelView";
 import State, { StateChanges } from "./State";
+import { setUnitSystem } from "./UnitSystemManager";
 import { URLState } from "./URLHistory";
+import type { UnitSystem } from "./utils/UnitHelpers";
 
 function buildDisplayFeature(
   primary: MapFeature,
@@ -46,7 +48,37 @@ export default class StateReducer implements EventBus {
   }
 
   openSidebar = () => {
-    this.setSidePanel("menu");
+    this.openFilter();
+  };
+
+  openMapLayers = () => {
+    this.toggleSidePanel("mapLayers");
+  };
+
+  openFilter = () => {
+    this.toggleSidePanel("filter");
+  };
+
+  openRoute = () => {
+    if (this._state.sidePanelView === "route") {
+      this.setSidePanel(null);
+      return;
+    }
+    this.setSidePanel("route");
+  };
+
+  closeRoutePanel = () => {
+    if (this._state.sidePanelView === "route") {
+      this.setSidePanel(null);
+    }
+  };
+
+  openSettings = () => {
+    this.toggleSidePanel("settings");
+  };
+
+  openCredits = () => {
+    this.toggleSidePanel("credits");
   };
 
   closeSidebar = () => {
@@ -54,12 +86,15 @@ export default class StateReducer implements EventBus {
   };
 
   closeMenu = () => {
+    if (this._state.sidePanelView === "route") {
+      return;
+    }
     this.setSidePanel(null);
   };
 
-  backToMenu = () => {
-    const changes: StateChanges = { sidePanelView: "menu" };
-    if (this._state.sidePanelView === "info") {
+  backToLayers = () => {
+    const changes: StateChanges = { sidePanelView: "filter" };
+    if (this._state.sidePanelView === "route") {
       changes.selectedObject = null;
       changes.mapFilters = clearedSelectionFilters(this._state);
     }
@@ -67,29 +102,15 @@ export default class StateReducer implements EventBus {
   };
 
   openAboutInfo = () => {
-    this.setSidePanel("about");
+    this.toggleSidePanel("about");
   };
 
   closeAboutInfo = () => {
-    this.backToMenu();
+    this.closeMenu();
   };
 
-  openLayers = () => {
-    this.setSidePanel("layers");
-  };
-
-  closeLayers = () => {
-    if (this._state.sidePanelView === "layers") {
-      this.setSidePanel(null);
-    }
-  };
-
-  toggleLayers = () => {
-    if (this._state.sidePanelView === "layers") {
-      this.setSidePanel(null);
-      return;
-    }
-    this.setSidePanel("layers");
+  setUnitSystem = (unitSystem: UnitSystem) => {
+    setUnitSystem(unitSystem);
   };
 
   setMapStyle = (style: MapStyle) => {
@@ -169,13 +190,19 @@ export default class StateReducer implements EventBus {
       });
     } catch (error) {
       console.log(error);
-      if (fallbackFeature && this._state.selectedObject?.id === id) {
+      if (this._state.selectedObject?.id !== id) {
+        return;
+      }
+      if (fallbackFeature) {
         this.update({
           selectedObject: {
             ...this._state.selectedObject,
             feature: buildDisplayFeature(fallbackFeature, relatedFeatures),
           },
         });
+        return;
+      }
+      if (this._state.selectedObject.feature) {
         return;
       }
       this.hideInfo();
@@ -194,7 +221,7 @@ export default class StateReducer implements EventBus {
       : undefined;
 
     this.update({
-      sidePanelView: "info",
+      sidePanelView: "route",
       selectedObject: {
         id,
         idType,
@@ -214,7 +241,7 @@ export default class StateReducer implements EventBus {
   hideInfo = () => {
     this.update({
       sidePanelView:
-        this._state.sidePanelView === "info" ? null : this._state.sidePanelView,
+        this._state.sidePanelView === "route" ? null : this._state.sidePanelView,
       selectedObject: null,
       mapFilters: clearedSelectionFilters(this._state),
     });
@@ -235,7 +262,7 @@ export default class StateReducer implements EventBus {
     if (urlState.aboutInfoOpen) {
       sidePanelView = "about";
     } else if (showInfo && urlState.selectedObjectID) {
-      sidePanelView = "info";
+      sidePanelView = "route";
     }
 
     this.update({
@@ -280,6 +307,14 @@ export default class StateReducer implements EventBus {
     this.update({ sidePanelView: view });
   }
 
+  private toggleSidePanel(view: Exclude<SidePanelView, null>) {
+    if (this._state.sidePanelView === view) {
+      this.closeMenu();
+    } else {
+      this.setSidePanel(view);
+    }
+  }
+
   private update(changes: StateChanges): void {
     const state = this._state as unknown as Record<string, unknown>;
     Object.keys(changes).forEach((key) => {
@@ -290,6 +325,15 @@ export default class StateReducer implements EventBus {
         delete (changes as Record<string, unknown>)[key];
       }
     });
+
+    if (
+      this._state.selectedObject?.showInfo &&
+      this._state.sidePanelView === null
+    ) {
+      this._state.sidePanelView = "route";
+      changes.sidePanelView = "route";
+    }
+
     this.updateHandler(this._state, changes);
   }
 }

@@ -22,6 +22,7 @@ import {
 } from "@mui/material";
 import * as React from "react";
 import type { ObjectIDType } from "../AppConfig";
+import { ctaButtonSx } from "../uiTheme";
 import { buildFeatureShareUrl } from "../utils/FeatureShareUrl";
 import { PanelActionButton } from "./PanelActionButton";
 
@@ -118,11 +119,9 @@ export const FeatureShareMenu: React.FunctionComponent<Props> = (props) => {
         </Box>
         <Button
           fullWidth
-          variant="contained"
-          size="small"
           startIcon={<ContentCopyIcon />}
           onClick={copyLink}
-          sx={{ mb: 1.5 }}
+          sx={[ctaButtonSx, { mb: 1.5 }]}
         >
           Copy link
         </Button>
