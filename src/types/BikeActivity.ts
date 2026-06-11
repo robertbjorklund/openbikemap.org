@@ -33,6 +33,13 @@ export const MTB_SCALE_LABELS: Record<number, string> = {
   6: "S6 — Extreme+",
 };
 
+export function toMtbScaleFilter(mtbScale: number | null): MtbScaleFilter {
+  if (mtbScale === null) {
+    return MTB_SCALE_NOT_SET;
+  }
+  return mtbScale as (typeof MTB_SCALES)[number];
+}
+
 export const MTB_SCALE_FILTER_LABELS: Record<MtbScaleFilter, string> = {
   0: MTB_SCALE_LABELS[0],
   1: MTB_SCALE_LABELS[1],

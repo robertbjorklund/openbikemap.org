@@ -10,13 +10,16 @@ import {
 } from "../utils/CameraPositionManager";
 import EventBus from "./EventBus";
 import { applyFilterRulesToMap } from "./MapFilterRules";
+import { applyPaintRulesToMap } from "./MapPaintRules";
 import { MapInteractionManager } from "./MapInteractionManager";
+import { EsriAttribution } from "./EsriAttribution";
 import { LogoControl } from "./LogoControl";
 import { LayersControl } from "./LayersControl";
-import { MenuControl } from "./MenuControl";
+import { registerSatelliteTileProtocol } from "./SatelliteTileProtocol";
 import { SelectedObject } from "./SelectedObject";
 import { SidePanelControl } from "./SidePanelControl";
 import State from "./State";
+import { addUnitSystemChangeListener_NonReactive } from "./UnitSystemManager";
 
 const SELECTED_SOURCE_ID = "openbikemap-selected";
 const SELECTED_LAYER_ID = "openbikemap-selected-line";
@@ -28,6 +31,9 @@ export class Map {
   private currentFilters: MapFilters = defaultMapFilters;
   private cameraPositionManager: CameraPositionManager;
   private sidePanelControl: SidePanelControl;
+  private layersControl: LayersControl;
+  private attributionControl: maplibregl.AttributionControl;
+  private mapScaleControl: maplibregl.ScaleControl;
   private selectedFeature: MapFeature | null = null;
 
   constructor(
@@ -38,6 +44,8 @@ export class Map {
   ) {
     this.cameraPositionManager = cameraPositionManager;
     const isEmbedded = window.self !== window.top;
+
+    registerSatelliteTileProtocol();
 
     this.map = new maplibregl.Map({
       container: containerID,
@@ -57,22 +65,25 @@ export class Map {
       this.currentFilters,
       MapStyle.Terrain,
     );
-    this.map.addControl(new MenuControl(eventBus), "top-left");
     this.map.addControl(this.sidePanelControl);
-    this.map.addControl(new LayersControl(eventBus), "bottom-right");
     this.map.addControl(new maplibregl.NavigationControl(), "top-right");
-    this.map.addControl(
-      new maplibregl.ScaleControl({ maxWidth: 80 }),
-      "bottom-left",
-    );
-    this.map.addControl(
-      new maplibregl.AttributionControl({
-        customAttribution: [
-          '<a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        ],
-      }),
-      "bottom-right",
-    );
+    this.mapScaleControl = new maplibregl.ScaleControl({ maxWidth: 80 });
+    this.map.addControl(this.mapScaleControl, "bottom-left");
+
+    addUnitSystemChangeListener_NonReactive({
+      onUnitSystemChange: (unitSystem) => {
+        this.mapScaleControl.setUnit(unitSystem);
+      },
+      triggerWhenInitialized: true,
+    });
+
+    // Bottom-right controls stack upward; first added sits on the bottom edge.
+    this.attributionControl = new maplibregl.AttributionControl({
+      customAttribution: [
+        '<a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      ],
+    });
+    this.map.addControl(this.attributionControl, "bottom-right");
 
     if (isEmbedded) {
       this.map.addControl(new LogoControl(), "bottom-right");
@@ -83,6 +94,9 @@ export class Map {
       trackUserLocation: true,
     });
     this.map.addControl(geolocateControl, "bottom-right");
+
+    this.layersControl = new LayersControl(eventBus);
+    this.map.addControl(this.layersControl, "bottom-right");
 
     navigator.permissions?.query({ name: "geolocation" }).then((result) => {
       if (result.state === "denied") {
@@ -102,8 +116,18 @@ export class Map {
 
     this.map.on("moveend", saveCamera);
     this.map.on("style.load", () => {
+      applyPaintRulesToMap(this.map);
       applyFilterRulesToMap(this.map, this.currentFilters);
       this.updateSelectedHighlight();
+    });
+
+    this.map.once("load", () => {
+      const esriAttribution = new EsriAttribution(
+        this.map,
+        "https://static.arcgis.com/attribution/World_Imagery",
+        this.attributionControl,
+      );
+      esriAttribution.autoManage();
     });
   }
 
@@ -112,15 +136,33 @@ export class Map {
       return;
     }
     this.currentStyle = style;
-    this.map.setStyle(MAP_STYLE_URLS[style]);
+    this.map.setStyle(MAP_STYLE_URLS[style], {
+      transformStyle: (_, newStyle) => {
+        if (
+          newStyle.sources.satellite &&
+          newStyle.sources.satellite.type === "raster"
+        ) {
+          return {
+            ...newStyle,
+            sources: {
+              ...newStyle.sources,
+              satellite: {
+                ...newStyle.sources.satellite,
+                tiles: ["satellite-filtered://{z}/{y}/{x}"],
+              },
+            },
+          };
+        }
+        return newStyle;
+      },
+    });
   }
 
   private setFiltersUnthrottled = (filters: MapFilters) => {
     this.currentFilters = filters;
-    this.sidePanelControl.setView(this.sidePanelControl.getView(), {
-      mapFilters: filters,
-    });
+    this.sidePanelControl.updateMapFilters(filters);
     this.waitForStyleReady(() => {
+      applyPaintRulesToMap(this.map);
       applyFilterRulesToMap(this.map, this.currentFilters);
     });
   };
@@ -128,14 +170,21 @@ export class Map {
   setFilters = throttle(100, this.setFiltersUnthrottled);
 
   updateSidePanel(state: State): void {
-    this.sidePanelControl.setView(state.sidePanelView, {
+    this.layersControl.setStyle(state.mapStyle);
+    const viewOptions: {
+      mapFilters: MapFilters;
+      mapStyle: MapStyle;
+      infoFeature?: MapFeature | null;
+    } = {
       mapFilters: state.mapFilters,
       mapStyle: state.mapStyle,
-      infoFeature:
-        state.sidePanelView === "info" && state.selectedObject?.feature
-          ? state.selectedObject.feature
-          : null,
-    });
+    };
+    if (state.sidePanelView === "route") {
+      viewOptions.infoFeature = state.selectedObject?.feature ?? null;
+    } else {
+      viewOptions.infoFeature = null;
+    }
+    this.sidePanelControl.setView(state.sidePanelView, viewOptions);
   }
 
   setSelectedObject(selectedObject: SelectedObject | null | undefined): void {

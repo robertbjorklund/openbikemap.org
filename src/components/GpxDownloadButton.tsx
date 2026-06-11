@@ -6,6 +6,7 @@ import {
   canExportFeatureGpx,
   downloadFeatureGpx,
 } from "../utils/GpxExporter";
+import { ctaButtonSx } from "../uiTheme";
 
 export const GpxDownloadButton: React.FunctionComponent<{
   feature: MapFeature;
@@ -17,8 +18,7 @@ export const GpxDownloadButton: React.FunctionComponent<{
       startIcon={<DownloadIcon />}
       disabled={!canDownload}
       onClick={() => downloadFeatureGpx(props.feature)}
-      size="small"
-      variant="outlined"
+      sx={ctaButtonSx}
     >
       Download GPX
     </Button>

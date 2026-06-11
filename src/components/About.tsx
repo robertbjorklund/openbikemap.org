@@ -6,9 +6,6 @@ import EventBus from "./EventBus";
 export const About: React.FunctionComponent<{ eventBus: EventBus }> = () => {
   return (
     <>
-      <Typography variant="h5" gutterBottom>
-        {AppConfig.appName}
-      </Typography>
       <Typography paragraph>{AppConfig.tagline}</Typography>
       <Typography variant="h6" gutterBottom>
         Status

@@ -34,6 +34,12 @@ export interface Source {
   id: string;
 }
 
+export interface ElevationProfile {
+  heights: number[];
+  resolution: number;
+  targetResolution: number;
+}
+
 export interface TrailProperties {
   type: FeatureType.Trail;
   id: string;
@@ -50,6 +56,7 @@ export interface TrailProperties {
   oneway: boolean | null;
   network: string | null;
   lengthMeters: number | null;
+  elevationProfile: ElevationProfile | null;
   status: Status;
   sources: Source[];
 }
@@ -63,6 +70,7 @@ export interface RouteProperties {
   distance: string | null;
   roundtrip: boolean | null;
   pavedRatio: number | null;
+  elevationProfile: ElevationProfile | null;
   status: Status;
   sources: Source[];
 }

@@ -9,7 +9,8 @@ body {
 }
 
 #map {
-  width: 100%;
+  width: calc(100% - var(--side-panel-rail-width, 80px));
+  margin-left: var(--side-panel-rail-width, 80px);
   height: 100%;
 }
 
@@ -34,11 +35,52 @@ body {
   color: #666;
 }
 
+.height-profile {
+  margin-top: 20px;
+  position: relative;
+}
+
+.height-profile-overlay {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  line-height: 1.4;
+  z-index: 10;
+}
+
+.chart-position-marker {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #000;
+  background-color: transparent;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+
+.distance-and-elevation-info {
+  margin-top: 4px;
+}
+
+.distance-and-elevation-info > *:after {
+  margin-right: 4px;
+  content: " ";
+}
+
 .logo-control-text {
   font-family: sans-serif;
   font-size: 18px;
   font-weight: bold;
-  background-image: linear-gradient(to right, #2e7d32, #1565c0);
+  background-image: linear-gradient(
+    to right,
+    var(--app-primary, #007b8b),
+    var(--app-accent, #005a66)
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -48,29 +90,139 @@ body {
   z-index: 3;
 }
 
-.menu-control button {
-  font-weight: bold;
+/* Keep OpenStreetMap attribution pinned as the bottom-right footer. */
+.maplibregl-ctrl-bottom-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib {
+  order: 999;
+  margin: 0;
+}
+
+.openbikemap-layers-control {
+  position: relative;
+}
+
+.openbikemap-basemap-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 2;
+}
+
+.openbikemap-basemap-menu-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.openbikemap-basemap-option {
+  width: auto;
+  min-width: 7rem;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.openbikemap-basemap-option.openbikemap-basemap-selected {
+  color: var(--app-primary, #007b8b);
 }
 
 .side-panel {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
-  height: 100%;
-  width: 400px;
-  max-width: min(400px, 85vw);
   z-index: 3;
-  transform: translateX(-100%);
-  transition: transform 0.25s ease-out;
-  pointer-events: none;
+  display: flex;
+  height: 100%;
+  width: 80px;
+  max-width: min(var(--side-panel-width, 480px), 100vw);
+  background: #fff;
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.12);
   box-sizing: border-box;
-}
-
-.side-panel.side-panel-open {
-  transform: translateX(0);
+  overflow: hidden;
+  transition: width 0.25s ease-out;
   pointer-events: auto;
 }
 
-.side-panel-inner {
+.side-panel.side-panel-open {
+  width: min(var(--side-panel-width, 480px), 100vw);
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.18);
+}
+
+.side-panel-rail {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 80px;
   height: 100%;
+  padding: 12px 0;
+  box-sizing: border-box;
+}
+
+.side-panel-rail-main,
+.side-panel-rail-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.side-panel-rail-bottom {
+  margin-top: auto;
+  padding-bottom: 12px;
+}
+
+.side-panel-rail-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+}
+
+.side-panel-rail-button-active {
+  background: var(--app-primary-soft, #e0f2f4);
+  color: var(--app-primary, #007b8b);
+}
+
+.side-panel-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.side-panel-inner {
+  flex: 1;
+  min-height: 0;
+  box-shadow: none !important;
+}
+
+.openbikemap-search-box {
+  position: fixed;
+  top: 12px;
+  left: calc(var(--side-panel-rail-width, 80px) + 12px);
+  z-index: 4;
+  width: min(360px, calc(100vw - var(--side-panel-rail-width, 80px) - 24px));
+  pointer-events: auto;
+}
+
+.openbikemap-search-input {
+  display: flex;
+  align-items: center;
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.openbikemap-search-results {
+  margin-top: 6px;
+  border-radius: 12px;
+  max-height: min(420px, calc(100vh - 80px));
+  overflow-y: auto;
 }

@@ -10,7 +10,8 @@ export class MapInteractionManager {
   private map: maplibregl.Map;
   private eventBus: EventBus;
   private interactionsEnabled = true;
-  private attached = false;
+  private attachedLayerHandlers = new Set<string>();
+  private hoverLayerCount = 0;
 
   constructor(map: maplibregl.Map, eventBus: EventBus) {
     this.map = map;
@@ -40,34 +41,31 @@ export class MapInteractionManager {
   }
 
   private attachListeners() {
-    if (this.attached) {
-      return;
-    }
-    this.attached = true;
+    const layers = this.getTappableLayerIds();
 
-    this.map.on("click", this.onMapClick);
-    this.map.on("mousemove", this.onMouseMove);
+    for (const layerId of layers) {
+      if (this.attachedLayerHandlers.has(layerId)) {
+        continue;
+      }
+      this.attachedLayerHandlers.add(layerId);
+      this.map.on("click", layerId, this.onLayerClick);
+      this.map.on("mouseenter", layerId, this.onLayerMouseEnter);
+      this.map.on("mouseleave", layerId, this.onLayerMouseLeave);
+    }
   }
 
-  private onMapClick = debounce(
+  private onLayerClick = debounce(
     10,
-    (e: maplibregl.MapMouseEvent) => {
+    (e: maplibregl.MapLayerMouseEvent) => {
       if (!this.interactionsEnabled) {
         return;
       }
 
-      const layers = this.getTappableLayerIds();
-      if (layers.length === 0) {
+      const feature = e.features?.[0];
+      if (!feature) {
         return;
       }
 
-      const features = this.map.queryRenderedFeatures(e.point, { layers });
-      if (features.length === 0) {
-        this.eventBus.hideInfo();
-        return;
-      }
-
-      const feature = features[0];
       const sourceLayer = (
         feature.layer as { "source-layer"?: string } | undefined
       )?.["source-layer"];
@@ -87,15 +85,18 @@ export class MapInteractionManager {
     { atBegin: true },
   );
 
-  private onMouseMove = (e: maplibregl.MapMouseEvent) => {
-    const layers = this.getTappableLayerIds();
-    if (layers.length === 0) {
-      this.map.getCanvas().style.cursor = "";
+  private onLayerMouseEnter = () => {
+    if (!this.interactionsEnabled) {
       return;
     }
+    this.hoverLayerCount += 1;
+    this.map.getCanvas().style.cursor = "pointer";
+  };
 
-    const features = this.map.queryRenderedFeatures(e.point, { layers });
-    this.map.getCanvas().style.cursor =
-      features.length > 0 && this.interactionsEnabled ? "pointer" : "";
+  private onLayerMouseLeave = () => {
+    this.hoverLayerCount = Math.max(0, this.hoverLayerCount - 1);
+    if (this.hoverLayerCount === 0) {
+      this.map.getCanvas().style.cursor = "";
+    }
   };
 }

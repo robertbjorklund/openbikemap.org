@@ -1,3 +1,4 @@
+import type * as maplibregl from "maplibre-gl";
 import * as React from "react";
 import {
   FeatureType,
@@ -14,6 +15,7 @@ export const Info: React.FunctionComponent<{
   eventBus: EventBus;
   width?: number;
   embedded?: boolean;
+  map?: maplibregl.Map;
 }> = (props) => {
   const { feature } = props;
 
@@ -24,6 +26,7 @@ export const Info: React.FunctionComponent<{
         eventBus={props.eventBus}
         width={props.width}
         embedded={props.embedded}
+        map={props.map}
       />
     );
   }
@@ -34,6 +37,7 @@ export const Info: React.FunctionComponent<{
       eventBus={props.eventBus}
       width={props.width}
       embedded={props.embedded}
+      map={props.map}
     />
   );
 };
