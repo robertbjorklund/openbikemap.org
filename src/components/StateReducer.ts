@@ -3,12 +3,17 @@ import { MapMarker } from "../MapMarker";
 import { MapStyle } from "../MapStyle";
 import {
   BikeActivity,
+  MTB_SCALE_FILTERS,
   type MtbScaleFilter,
-  RoutePavedBucket,
 } from "../types/BikeActivity";
+import {
+  ROUTE_NETWORK_FILTERS,
+  type RouteNetworkFilter,
+} from "../types/RouteNetwork";
 import type { MapFeature } from "../types/FeatureTypes";
 import { mergeSegmentGroup } from "../utils/FeatureGroup";
 import EventBus, { type ShowInfoOptions } from "./EventBus";
+import { isFeatureVisibleUnderFilters } from "./MapFilterRules";
 import { loadGeoJSON } from "./GeoJSONLoader";
 import type { ObjectIDType } from "./SelectedObject";
 import type { SidePanelView } from "./SidePanelView";
@@ -25,14 +30,6 @@ function buildDisplayFeature(
     return primary;
   }
   return mergeSegmentGroup(primary, relatedFeatures);
-}
-
-function clearedSelectionFilters(state: State) {
-  return {
-    ...state.mapFilters,
-    selectedObjectID: null,
-    selectedSegmentIds: [],
-  };
 }
 
 export default class StateReducer implements EventBus {
@@ -96,7 +93,6 @@ export default class StateReducer implements EventBus {
     const changes: StateChanges = { sidePanelView: "filter" };
     if (this._state.sidePanelView === "route") {
       changes.selectedObject = null;
-      changes.mapFilters = clearedSelectionFilters(this._state);
     }
     this.update(changes);
   };
@@ -119,12 +115,26 @@ export default class StateReducer implements EventBus {
 
   toggleActivity = (activity: BikeActivity) => {
     const hidden = this._state.mapFilters.hiddenActivities;
-    const hiddenActivities = hidden.includes(activity)
+    const enabling = hidden.includes(activity);
+    const hiddenActivities = enabling
       ? hidden.filter((a) => a !== activity)
       : [...hidden, activity];
-    this.update({
-      mapFilters: { ...this._state.mapFilters, hiddenActivities },
-    });
+
+    const mapFilters = { ...this._state.mapFilters, hiddenActivities };
+
+    if (activity === BikeActivity.Mtb) {
+      mapFilters.hiddenMtbScales = enabling
+        ? []
+        : [...MTB_SCALE_FILTERS];
+    }
+
+    if (activity === BikeActivity.Routes) {
+      mapFilters.hiddenRouteNetworks = enabling
+        ? []
+        : [...ROUTE_NETWORK_FILTERS];
+    }
+
+    this.update({ mapFilters });
   };
 
   toggleMtbScale = (scale: MtbScaleFilter) => {
@@ -137,22 +147,13 @@ export default class StateReducer implements EventBus {
     });
   };
 
-  setMinTrailLength = (meters: number) => {
+  toggleRouteNetwork = (network: RouteNetworkFilter) => {
+    const hidden = this._state.mapFilters.hiddenRouteNetworks;
+    const hiddenRouteNetworks = hidden.includes(network)
+      ? hidden.filter((value) => value !== network)
+      : [...hidden, network];
     this.update({
-      mapFilters: {
-        ...this._state.mapFilters,
-        minTrailLengthMeters: Math.max(0, meters),
-      },
-    });
-  };
-
-  toggleRoutePavedBucket = (bucket: RoutePavedBucket) => {
-    const hidden = this._state.mapFilters.hiddenRoutePavedBuckets;
-    const hiddenRoutePavedBuckets = hidden.includes(bucket)
-      ? hidden.filter((b) => b !== bucket)
-      : [...hidden, bucket];
-    this.update({
-      mapFilters: { ...this._state.mapFilters, hiddenRoutePavedBuckets },
+      mapFilters: { ...this._state.mapFilters, hiddenRouteNetworks },
     });
   };
 
@@ -179,13 +180,6 @@ export default class StateReducer implements EventBus {
         selectedObject: {
           ...this._state.selectedObject,
           feature: buildDisplayFeature(apiFeature, mergedRelated),
-        },
-        mapFilters: {
-          ...this._state.mapFilters,
-          selectedObjectID: apiFeature.properties.id,
-          selectedSegmentIds: mergedRelated.map(
-            (feature) => feature.properties.id,
-          ),
         },
       });
     } catch (error) {
@@ -215,7 +209,6 @@ export default class StateReducer implements EventBus {
     const relatedFeatures =
       options?.relatedFeatures ??
       (clickedFeature ? [clickedFeature] : []);
-    const segmentIds = relatedFeatures.map((feature) => feature.properties.id);
     const displayFeature = clickedFeature
       ? buildDisplayFeature(clickedFeature, relatedFeatures)
       : undefined;
@@ -228,11 +221,6 @@ export default class StateReducer implements EventBus {
         showInfo: true,
         feature: displayFeature,
       },
-      mapFilters: {
-        ...this._state.mapFilters,
-        selectedObjectID: id,
-        selectedSegmentIds: segmentIds,
-      },
     });
 
     this.loadInfoData(id, idType, relatedFeatures, clickedFeature);
@@ -243,7 +231,6 @@ export default class StateReducer implements EventBus {
       sidePanelView:
         this._state.sidePanelView === "route" ? null : this._state.sidePanelView,
       selectedObject: null,
-      mapFilters: clearedSelectionFilters(this._state),
     });
   };
 
@@ -274,20 +261,6 @@ export default class StateReducer implements EventBus {
             showInfo,
           }
         : null,
-      mapFilters: {
-        ...this._state.mapFilters,
-        selectedObjectID:
-          showInfo &&
-          urlState.selectedObjectIDType === AppConfig.defaultObjectIdType
-            ? urlState.selectedObjectID
-            : null,
-        selectedSegmentIds:
-          showInfo &&
-          urlState.selectedObjectIDType === AppConfig.defaultObjectIdType &&
-          urlState.selectedObjectID
-            ? [urlState.selectedObjectID]
-            : [],
-      },
       markers: urlState.markers,
     });
 
@@ -316,6 +289,19 @@ export default class StateReducer implements EventBus {
   }
 
   private update(changes: StateChanges): void {
+    if (changes.mapFilters !== undefined) {
+      const feature = this._state.selectedObject?.feature;
+      if (
+        feature &&
+        !isFeatureVisibleUnderFilters(feature, changes.mapFilters)
+      ) {
+        changes.selectedObject = null;
+        if (this._state.sidePanelView === "route") {
+          changes.sidePanelView = null;
+        }
+      }
+    }
+
     const state = this._state as unknown as Record<string, unknown>;
     Object.keys(changes).forEach((key) => {
       const change = (changes as Record<string, unknown>)[key];

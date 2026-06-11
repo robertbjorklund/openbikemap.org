@@ -8,9 +8,9 @@ import {
 
   type MtbScaleFilter,
 
-  RoutePavedBucket,
-
 } from "../types/BikeActivity";
+
+import type { RouteNetworkFilter } from "../types/RouteNetwork";
 
 import type { MapFeature } from "../types/FeatureTypes";
 
@@ -66,9 +66,7 @@ export default interface EventBus {
 
   toggleMtbScale(scale: MtbScaleFilter): void;
 
-  setMinTrailLength(meters: number): void;
-
-  toggleRoutePavedBucket(bucket: RoutePavedBucket): void;
+  toggleRouteNetwork(network: RouteNetworkFilter): void;
 
   showInfo(id: string, options?: ShowInfoOptions): void;
 

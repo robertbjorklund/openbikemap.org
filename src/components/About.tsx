@@ -8,24 +8,19 @@ export const About: React.FunctionComponent<{ eventBus: EventBus }> = () => {
     <>
       <Typography paragraph>{AppConfig.tagline}</Typography>
       <Typography variant="h6" gutterBottom>
-        Status
+        What&apos;s on the map
       </Typography>
-      <Typography paragraph>
-        This is the initial project scaffold. The basemap is provided by{" "}
+      <Typography component="ul" sx={{ pl: 2 }}>
+        <li>Signed bicycle routes (lcn/ncn/rcn/icn) — asphalt and gravel</li>
+        <li>MTB trails by difficulty (mtb:scale S0–S6)</li>
+      </Typography>
+      <Typography paragraph sx={{ mt: 2 }}>
+        Urban cycle paths and footways are intentionally excluded. The basemap is
+        provided by{" "}
         <Link href="https://openfreemap.org" target="_blank" rel="noreferrer">
           OpenFreeMap
         </Link>
-        . Bicycle trail layers, search, and feature details will be added once
-        the data pipeline and API are in place.
-      </Typography>
-      <Typography variant="h6" gutterBottom>
-        Planned trail types
-      </Typography>
-      <Typography component="ul" sx={{ pl: 2 }}>
-        <li>Cycleways</li>
-        <li>Bicycle routes (lcn/ncn/rcn/icn)</li>
-        <li>MTB trails</li>
-        <li>Gravel and forest tracks</li>
+        .
       </Typography>
       <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
         Data

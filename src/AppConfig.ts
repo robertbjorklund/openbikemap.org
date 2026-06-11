@@ -16,7 +16,7 @@ export const AppConfig = {
 
   tagline:
 
-    "Explore bicycle trails, cycling routes, and bike infrastructure worldwide.",
+    "Find MTB trails and long-distance cycling routes for training and adventure — download GPX and ride.",
 
   /**
 

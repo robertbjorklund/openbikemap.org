@@ -3,9 +3,12 @@ import type * as maplibregl from "maplibre-gl";
 import { mapFeatureFromMvt } from "../components/MvtFeature";
 import {
   FeatureType,
+  TRAIL_CATEGORY_LABELS,
   type MapFeature,
   type TrailCategory,
 } from "../types/FeatureTypes";
+
+const GENERIC_TRAIL_NAMES = new Set(Object.values(TRAIL_CATEGORY_LABELS));
 
 export interface FeatureGroupKey {
   name: string;
@@ -26,7 +29,11 @@ function getLineStrings(
 export function getFeatureGroupKey(feature: MapFeature): FeatureGroupKey | null {
   const { properties } = feature;
 
-  if (properties.type === FeatureType.Trail && properties.name) {
+  if (
+    properties.type === FeatureType.Trail &&
+    properties.name &&
+    !GENERIC_TRAIL_NAMES.has(properties.name)
+  ) {
     return { name: properties.name, category: properties.category };
   }
 
