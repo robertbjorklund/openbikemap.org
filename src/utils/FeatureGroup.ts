@@ -82,6 +82,20 @@ export function matchesGroupKey(
   return false;
 }
 
+/** Merge vector-tile clips that share the same feature id (one clip per tile). */
+export function mergeTileClips(features: MapFeature[]): MapFeature[] {
+  const groups = new Map<string, MapFeature[]>();
+  for (const feature of features) {
+    const group = groups.get(feature.properties.id) ?? [];
+    group.push(feature);
+    groups.set(feature.properties.id, group);
+  }
+
+  return [...groups.values()].map((group) =>
+    mergeSegmentGroup(group[0], group),
+  );
+}
+
 export function findRelatedFeatures(
   map: maplibregl.Map,
   primary: MapFeature,
@@ -102,22 +116,46 @@ export function findRelatedFeatures(
     sourceLayer,
   });
 
-  const byId = new Map<string, MapFeature>();
+  const matches: MapFeature[] = [];
   for (const raw of rawFeatures) {
     const feature = mapFeatureFromMvt(
       raw as maplibregl.MapGeoJSONFeature,
       sourceLayer,
     );
     if (feature && matchesGroupKey(feature, groupKey)) {
-      byId.set(feature.properties.id, feature);
+      matches.push(feature);
     }
   }
 
-  if (byId.size === 0) {
+  if (matches.length === 0) {
     return [primary];
   }
 
-  return [...byId.values()];
+  return mergeTileClips(matches);
+}
+
+/** One GeoJSON feature per line for reliable highlight rendering. */
+export function featuresForHighlight(feature: MapFeature): MapFeature[] {
+  const lines = getLineStrings(feature.geometry);
+  if (lines.length === 0) {
+    return [];
+  }
+  if (lines.length === 1) {
+    return [
+      {
+        ...feature,
+        geometry: { type: "LineString", coordinates: lines[0] },
+      },
+    ];
+  }
+  return lines.map(
+    (coordinates) =>
+      ({
+        type: "Feature",
+        geometry: { type: "LineString", coordinates },
+        properties: feature.properties,
+      }) as MapFeature,
+  );
 }
 
 export function mergeSegmentGroup(
