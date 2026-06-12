@@ -37,7 +37,7 @@ export const InfoPanelActions: React.FunctionComponent<{
       }}
     >
       <PanelActionButton
-        label="Download GPX"
+        label="GPX"
         icon={<DownloadIcon />}
         disabled={!canDownload}
         onClick={() => downloadFeatureGpx(feature)}
@@ -48,7 +48,7 @@ export const InfoPanelActions: React.FunctionComponent<{
       />
       {osmEditUrl && (
         <PanelActionButton
-          label="Edit route"
+          label="Edit"
           icon={<EditIcon />}
           href={osmEditUrl}
         />
