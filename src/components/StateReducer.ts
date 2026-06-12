@@ -10,11 +10,15 @@ import {
   ROUTE_NETWORK_FILTERS,
   type RouteNetworkFilter,
 } from "../types/RouteNetwork";
-import type { MapFeature } from "../types/FeatureTypes";
-import { mergeSegmentGroup } from "../utils/FeatureGroup";
+import { FeatureType, type MapFeature } from "../types/FeatureTypes";
+import {
+  getRouteGroupKey,
+  matchesRouteGroupKey,
+  mergeSegmentGroup,
+} from "../utils/FeatureGroup";
 import EventBus, { type ShowInfoOptions } from "./EventBus";
 import { isFeatureVisibleUnderFilters } from "./MapFilterRules";
-import { loadGeoJSON } from "./GeoJSONLoader";
+import { loadGeoJSON, searchFeatures } from "./GeoJSONLoader";
 import type { ObjectIDType } from "./SelectedObject";
 import type { SidePanelView } from "./SidePanelView";
 import State, { StateChanges } from "./State";
@@ -142,8 +146,22 @@ export default class StateReducer implements EventBus {
     const hiddenMtbScales = hidden.includes(scale)
       ? hidden.filter((s) => s !== scale)
       : [...hidden, scale];
+
+    const allScalesHidden = MTB_SCALE_FILTERS.every((value) =>
+      hiddenMtbScales.includes(value),
+    );
+    const hiddenActivities = allScalesHidden
+      ? [...new Set([...this._state.mapFilters.hiddenActivities, BikeActivity.Mtb])]
+      : this._state.mapFilters.hiddenActivities.filter(
+          (activity) => activity !== BikeActivity.Mtb,
+        );
+
     this.update({
-      mapFilters: { ...this._state.mapFilters, hiddenMtbScales },
+      mapFilters: {
+        ...this._state.mapFilters,
+        hiddenMtbScales,
+        hiddenActivities,
+      },
     });
   };
 
@@ -152,9 +170,68 @@ export default class StateReducer implements EventBus {
     const hiddenRouteNetworks = hidden.includes(network)
       ? hidden.filter((value) => value !== network)
       : [...hidden, network];
+
+    const allNetworksHidden = ROUTE_NETWORK_FILTERS.every((value) =>
+      hiddenRouteNetworks.includes(value),
+    );
+    const hiddenActivities = allNetworksHidden
+      ? [
+          ...new Set([
+            ...this._state.mapFilters.hiddenActivities,
+            BikeActivity.Routes,
+          ]),
+        ]
+      : this._state.mapFilters.hiddenActivities.filter(
+          (activity) => activity !== BikeActivity.Routes,
+        );
+
     this.update({
-      mapFilters: { ...this._state.mapFilters, hiddenRouteNetworks },
+      mapFilters: {
+        ...this._state.mapFilters,
+        hiddenRouteNetworks,
+        hiddenActivities,
+      },
     });
+  };
+
+  private resolveRelatedRouteFeatures = async (
+    primaryFeature: MapFeature,
+    relatedFeatures: MapFeature[],
+  ): Promise<MapFeature[]> => {
+    if (primaryFeature.properties.type !== FeatureType.Route) {
+      return relatedFeatures;
+    }
+
+    const routeKey = getRouteGroupKey(primaryFeature);
+    if (!routeKey) {
+      return relatedFeatures;
+    }
+
+    const query =
+      primaryFeature.properties.name?.trim() ||
+      primaryFeature.properties.ref?.trim();
+    if (!query) {
+      return relatedFeatures;
+    }
+
+    try {
+      const searchHits = await searchFeatures(query, 100);
+      const byId = new Map(
+        relatedFeatures.map((feature) => [feature.properties.id, feature]),
+      );
+      for (const hit of searchHits) {
+        if (
+          hit.properties.type === FeatureType.Route &&
+          matchesRouteGroupKey(hit.properties, routeKey) &&
+          !byId.has(hit.properties.id)
+        ) {
+          byId.set(hit.properties.id, hit);
+        }
+      }
+      return [...byId.values()];
+    } catch {
+      return relatedFeatures;
+    }
   };
 
   private loadFullRelatedFeatures = async (
@@ -200,10 +277,14 @@ export default class StateReducer implements EventBus {
         return;
       }
 
+      const expandedRelated = await this.resolveRelatedRouteFeatures(
+        apiFeature,
+        relatedFeatures,
+      );
       const fullRelated = await this.loadFullRelatedFeatures(
         id,
         idType,
-        relatedFeatures,
+        expandedRelated,
         apiFeature,
       );
 

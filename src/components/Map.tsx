@@ -15,7 +15,10 @@ import {
   applyFiltersToStyleLayers,
   isFeatureVisibleUnderFilters,
 } from "./MapFilterRules";
-import { applyPaintRulesToMap } from "./MapPaintRules";
+import {
+  applyPaintRulesToMap,
+  applyPaintRulesToStyleLayers,
+} from "./MapPaintRules";
 import { MapInteractionManager } from "./MapInteractionManager";
 import { EsriAttribution } from "./EsriAttribution";
 import { LogoControl } from "./LogoControl";
@@ -163,9 +166,11 @@ export class Map {
 
         return {
           ...transformed,
-          layers: applyFiltersToStyleLayers(
-            transformed.layers,
-            this.currentFilters,
+          layers: applyPaintRulesToStyleLayers(
+            applyFiltersToStyleLayers(
+              transformed.layers,
+              this.currentFilters,
+            ),
           ),
         };
       },
@@ -176,9 +181,15 @@ export class Map {
     this.currentFilters = filters;
     this.sidePanelControl.updateMapFilters(filters);
     this.updateSelectedHighlight();
-    this.waitForStyleReady(() => {
+    const apply = () => {
       applyFilterRulesToMap(this.map, filters);
-    });
+      applyPaintRulesToMap(this.map);
+    };
+    if (this.map.isStyleLoaded()) {
+      apply();
+      return;
+    }
+    this.map.once("style.load", apply);
   };
 
   setFilters = throttle(100, this.setFiltersUnthrottled);
@@ -223,14 +234,6 @@ export class Map {
 
   getMaplibreMap(): maplibregl.Map {
     return this.map;
-  }
-
-  private waitForStyleReady(callback: () => void): void {
-    if (this.map.isStyleLoaded()) {
-      callback();
-      return;
-    }
-    this.map.once("style.load", callback);
   }
 
   private ensureSelectedHighlightLayer(): void {

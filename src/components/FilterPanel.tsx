@@ -36,8 +36,6 @@ import {
 
   ROUTE_NETWORK_NOT_SET,
 
-  routeNetworkColor,
-
   type RouteNetworkFilter,
 
 } from "../types/RouteNetwork";
@@ -45,6 +43,7 @@ import {
 import EventBus from "./EventBus";
 
 import { MtbScaleLegendIcon } from "./MtbScaleLegendIcon";
+import { RouteNetworkLegendIcon } from "./RouteNetworkLegendIcon";
 
 import { PanelShell } from "./PanelShell";
 
@@ -64,15 +63,9 @@ function routeNetworkLabel(network: RouteNetworkFilter): string {
 
 
 
-function routeNetworkSwatchColor(network: RouteNetworkFilter): string {
+function routeNetworkForIcon(network: RouteNetworkFilter): string | null {
 
-  if (network === ROUTE_NETWORK_NOT_SET) {
-
-    return routeNetworkColor(null);
-
-  }
-
-  return routeNetworkColor(network);
+  return network === ROUTE_NETWORK_NOT_SET ? null : network;
 
 }
 
@@ -276,21 +269,9 @@ export const FilterPanel: React.FunctionComponent<{
 
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 
-                      <Box
+                      <RouteNetworkLegendIcon
 
-                        sx={{
-
-                          width: 20,
-
-                          height: 4,
-
-                          borderRadius: 1,
-
-                          bgcolor: routeNetworkSwatchColor(network),
-
-                          flexShrink: 0,
-
-                        }}
+                        network={routeNetworkForIcon(network)}
 
                       />
 

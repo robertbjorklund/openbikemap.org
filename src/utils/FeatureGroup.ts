@@ -5,6 +5,7 @@ import {
   FeatureType,
   TRAIL_CATEGORY_LABELS,
   type MapFeature,
+  type RouteProperties,
   type TrailCategory,
 } from "../types/FeatureTypes";
 
@@ -13,8 +14,54 @@ const GENERIC_TRAIL_NAMES = new Set(Object.values(TRAIL_CATEGORY_LABELS));
 export interface FeatureGroupKey {
   name: string;
   category?: TrailCategory;
-  network?: string | null;
-  ref?: string | null;
+  /** Route groups match by name and/or ref, not network. */
+  routeGroupKey?: RouteGroupKey;
+}
+
+export interface RouteGroupKey {
+  nameKey: string | null;
+  refKey: string | null;
+}
+
+/** Strip trailing parenthetical suffix, e.g. "Kustlinjen (29)" → "kustlinjen". */
+export function normalizeRouteName(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s*\([^)]*\)\s*$/, "")
+    .trim();
+}
+
+function normalizeRouteRef(ref: string): string {
+  return normalizeRouteName(ref) || ref.trim();
+}
+
+export function getRouteGroupKey(feature: MapFeature): RouteGroupKey | null {
+  if (feature.properties.type !== FeatureType.Route) {
+    return null;
+  }
+  const { name, ref } = feature.properties;
+  const nameKey = name ? normalizeRouteName(name) || null : null;
+  const refKey = ref ? normalizeRouteRef(ref) || null : null;
+  if (!nameKey && !refKey) {
+    return null;
+  }
+  return { nameKey, refKey };
+}
+
+export function matchesRouteGroupKey(
+  properties: RouteProperties,
+  key: RouteGroupKey,
+): boolean {
+  const name = properties.name ? normalizeRouteName(properties.name) || null : null;
+  const ref = properties.ref ? normalizeRouteRef(properties.ref) || null : null;
+  if (key.nameKey && name === key.nameKey) {
+    return true;
+  }
+  if (key.refKey && ref === key.refKey) {
+    return true;
+  }
+  return false;
 }
 
 function getLineStrings(
@@ -38,14 +85,13 @@ export function getFeatureGroupKey(feature: MapFeature): FeatureGroupKey | null 
   }
 
   if (properties.type === FeatureType.Route) {
-    const name = properties.name || properties.ref;
-    if (!name) {
+    const routeKey = getRouteGroupKey(feature);
+    if (!routeKey) {
       return null;
     }
     return {
-      name,
-      network: properties.network,
-      ref: properties.ref,
+      name: routeKey.nameKey ?? routeKey.refKey ?? "",
+      routeGroupKey: routeKey,
     };
   }
 
@@ -65,21 +111,31 @@ export function matchesGroupKey(
     );
   }
 
-  if (properties.type === FeatureType.Route) {
-    const name = properties.name || properties.ref;
-    if (name !== key.name) {
-      return false;
-    }
-    if (key.network && properties.network !== key.network) {
-      return false;
-    }
-    if (key.ref && properties.ref !== key.ref) {
-      return false;
-    }
-    return true;
+  if (properties.type === FeatureType.Route && key.routeGroupKey) {
+    return matchesRouteGroupKey(properties, key.routeGroupKey);
   }
 
   return false;
+}
+
+function mergeFeatureGeometries(
+  primary: MapFeature,
+  parts: MapFeature[],
+): MapFeature {
+  const lines = parts.flatMap((part) => getLineStrings(part.geometry));
+  if (lines.length === 0) {
+    return primary;
+  }
+  if (lines.length === 1) {
+    return {
+      ...primary,
+      geometry: { type: "LineString", coordinates: lines[0] },
+    };
+  }
+  return {
+    ...primary,
+    geometry: { type: "MultiLineString", coordinates: lines },
+  };
 }
 
 /** Merge vector-tile clips that share the same feature id (one clip per tile). */
@@ -91,9 +147,18 @@ export function mergeTileClips(features: MapFeature[]): MapFeature[] {
     groups.set(feature.properties.id, group);
   }
 
-  return [...groups.values()].map((group) =>
-    mergeSegmentGroup(group[0], group),
-  );
+  return [...groups.values()].map((group) => {
+    if (group.length === 1) {
+      return group[0];
+    }
+    const sameId = group.every(
+      (feature) => feature.properties.id === group[0].properties.id,
+    );
+    if (sameId) {
+      return mergeFeatureGeometries(group[0], group);
+    }
+    return mergeSegmentGroup(group[0], group);
+  });
 }
 
 export function findRelatedFeatures(
@@ -101,10 +166,6 @@ export function findRelatedFeatures(
   primary: MapFeature,
 ): MapFeature[] {
   const groupKey = getFeatureGroupKey(primary);
-  if (!groupKey) {
-    return [primary];
-  }
-
   const sourceLayer =
     primary.properties.type === FeatureType.Route ? "routes" : "trails";
 
@@ -116,13 +177,21 @@ export function findRelatedFeatures(
     sourceLayer,
   });
 
+  const primaryId = primary.properties.id;
   const matches: MapFeature[] = [];
   for (const raw of rawFeatures) {
     const feature = mapFeatureFromMvt(
       raw as maplibregl.MapGeoJSONFeature,
       sourceLayer,
     );
-    if (feature && matchesGroupKey(feature, groupKey)) {
+    if (!feature) {
+      continue;
+    }
+    if (feature.properties.id === primaryId) {
+      matches.push(feature);
+      continue;
+    }
+    if (groupKey && matchesGroupKey(feature, groupKey)) {
       matches.push(feature);
     }
   }

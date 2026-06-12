@@ -20,7 +20,7 @@ export const GpxDownloadButton: React.FunctionComponent<{
       onClick={() => downloadFeatureGpx(props.feature)}
       sx={ctaButtonSx}
     >
-      Download GPX
+      GPX
     </Button>
   );
 };

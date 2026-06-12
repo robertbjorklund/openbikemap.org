@@ -96,14 +96,7 @@ function PurpleCircle({ size }: { size: number }) {
   return (
     <IconFrame size={size}>
       <svg width={size} height={size} viewBox="0 0 18 18">
-        <circle
-          cx="9"
-          cy="9"
-          r="6"
-          fill="none"
-          stroke={TRAIL_COLOR_OTHER}
-          strokeWidth="2"
-        />
+        <circle cx="9" cy="9" r="6" fill={TRAIL_COLOR_OTHER} />
       </svg>
     </IconFrame>
   );

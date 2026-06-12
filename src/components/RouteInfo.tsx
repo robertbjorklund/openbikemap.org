@@ -18,7 +18,11 @@ import { ElevationStats } from "./ElevationStats";
 
 import EventBus from "./EventBus";
 
-import { InfoFeatureHeader } from "./InfoFeatureHeader";
+import {
+  InfoFeatureHeader,
+  TITLE_ICON_SIZE,
+} from "./InfoFeatureHeader";
+import { RouteNetworkLegendIcon } from "./RouteNetworkLegendIcon";
 
 import { InfoPanelActions } from "./InfoPanelActions";
 
@@ -84,7 +88,16 @@ function RouteInfoBody({
 
       {showTitle && (
 
-        <InfoFeatureHeader title={title} subtitle={subtitle} />
+        <InfoFeatureHeader
+          title={title}
+          subtitle={subtitle}
+          icon={
+            <RouteNetworkLegendIcon
+              network={properties.network}
+              size={TITLE_ICON_SIZE}
+            />
+          }
+        />
 
       )}
 

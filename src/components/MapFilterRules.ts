@@ -71,6 +71,30 @@ const BASEMAP_PATH_LAYER_IDS = [
 
 ] as const;
 
+const TRAIL_LAYER_IDS = [
+
+  "trails-casing",
+
+  "trails",
+
+  "trails-label",
+
+  "tappable-trail",
+
+] as const;
+
+const ROUTE_LAYER_IDS = [
+
+  "routes-casing",
+
+  "routes",
+
+  "routes-label",
+
+  "tappable-route",
+
+] as const;
+
 
 
 function mtbScaleNumber(): maplibregl.ExpressionSpecification {
@@ -525,11 +549,34 @@ export function applyFiltersToStyleLayers(
   });
 }
 
-function isManagedFilterLayer(layer: maplibregl.LayerSpecification): boolean {
-  if (shouldHideBasemapPathLayer(layer)) {
-    return true;
+function applyLayerGroupToMap(
+  map: maplibregl.Map,
+  layerIds: readonly string[],
+  groupVisible: boolean,
+  filterRule: ObjectFilterRules,
+): void {
+  const hideGroup = !groupVisible || filterRule === "hidden";
+  const visibility: "visible" | "none" = hideGroup ? "none" : "visible";
+  const filter: maplibregl.FilterSpecification | null =
+    hideGroup || filterRule === null ? null : filterRule;
+
+  for (const layerId of layerIds) {
+    if (!map.getLayer(layerId)) {
+      continue;
+    }
+    map.setLayoutProperty(layerId, "visibility", visibility);
+    map.setFilter(layerId, filter);
   }
-  return hasSource(layer) && layer.source === "openbikemap";
+}
+
+function hideBasemapPathLayers(map: maplibregl.Map): void {
+  const style = map.getStyle();
+  for (const layer of style.layers) {
+    if (!shouldHideBasemapPathLayer(layer) || !map.getLayer(layer.id)) {
+      continue;
+    }
+    map.setLayoutProperty(layer.id, "visibility", "none");
+  }
 }
 
 /** Apply filter rules to the live map (immediate checkbox response). */
@@ -541,33 +588,24 @@ export function applyFilterRulesToMap(
     return;
   }
 
-  const style = map.getStyle();
-  const updatedLayers = applyFiltersToStyleLayers(style.layers, filters);
+  const rules = getFilterRules(filters);
 
-  for (let i = 0; i < style.layers.length; i++) {
-    const original = style.layers[i];
-    const updated = updatedLayers[i];
-    if (!original || !updated || !isManagedFilterLayer(original)) {
-      continue;
-    }
+  applyLayerGroupToMap(
+    map,
+    TRAIL_LAYER_IDS,
+    isMtbActivityVisible(filters),
+    rules.trails,
+  );
 
-    if (!map.getLayer(original.id)) {
-      continue;
-    }
+  applyLayerGroupToMap(
+    map,
+    ROUTE_LAYER_IDS,
+    isRoutesActivityVisible(filters),
+    rules.routes,
+  );
 
-    const visibility =
-      updated.layout?.visibility === "none" ? "none" : "visible";
-    map.setLayoutProperty(original.id, "visibility", visibility);
-
-    if ("filter" in updated) {
-      map.setFilter(
-        original.id,
-        updated.filter as maplibregl.FilterSpecification,
-      );
-    } else {
-      map.setFilter(original.id, null);
-    }
-  }
+  hideBasemapPathLayers(map);
+  map.triggerRepaint();
 }
 
 

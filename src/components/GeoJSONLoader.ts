@@ -1,5 +1,18 @@
 import { API_BASE_URL } from "../Config";
+import type { MapFeature } from "../types/FeatureTypes";
 import type { ObjectIDType } from "./SelectedObject";
+
+export async function searchFeatures(
+  query: string,
+  limit = 100,
+): Promise<MapFeature[]> {
+  const url = `${API_BASE_URL}/search?query=${encodeURIComponent(query)}&limit=${limit}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    return [];
+  }
+  return response.json() as Promise<MapFeature[]>;
+}
 
 export async function loadGeoJSON<T>(
   entityID: string,
