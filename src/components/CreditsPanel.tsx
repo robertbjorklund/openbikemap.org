@@ -45,7 +45,19 @@ export const CreditsPanel: React.FunctionComponent<{
         >
           © OpenMapTiles
         </Link>
-        .
+        . Shaded relief in terrain view uses{" "}
+        <Link href="https://mapterhorn.com/" target="_blank" rel="noreferrer">
+          Mapterhorn
+        </Link>{" "}
+        terrain tiles (
+        <Link
+          href="https://mapterhorn.com/attribution"
+          target="_blank"
+          rel="noreferrer"
+        >
+          attribution
+        </Link>
+        ).
       </Typography>
 
       <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>

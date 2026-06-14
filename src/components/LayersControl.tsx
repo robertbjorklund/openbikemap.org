@@ -8,7 +8,7 @@ const STYLE_LABELS: Record<MapStyle, string> = {
 };
 
 const STYLE_DESCRIPTIONS: Record<MapStyle, string> = {
-  [MapStyle.Terrain]: "Topographic map with trails & routes",
+  [MapStyle.Terrain]: "Topographic map with shaded relief, trails & routes",
   [MapStyle.Satellite]: "Aerial imagery with trails & routes",
 };
 

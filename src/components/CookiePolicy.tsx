@@ -60,7 +60,11 @@ export const CookiePolicy: React.FunctionComponent = () => {
         >
           OpenMapTiles
         </Link>
-        , and, if you choose satellite view,{" "}
+        , and, if you choose terrain view,{" "}
+        <Link href="https://mapterhorn.com/" target="_blank" rel="noreferrer">
+          Mapterhorn
+        </Link>
+        . If you choose satellite view,{" "}
         <Link href="https://www.esri.com/" target="_blank" rel="noreferrer">
           Esri
         </Link>

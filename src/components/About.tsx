@@ -28,10 +28,14 @@ export const About: React.FunctionComponent<{ eventBus: EventBus }> = () => {
         or filter each layer by difficulty or route network.
       </Typography>
       <Typography paragraph sx={{ mt: 2 }}>
-        Urban cycle paths and footways are intentionally excluded. The basemap is
-        provided by{" "}
+        Urban cycle paths and footways are intentionally excluded. The terrain
+        basemap is provided by{" "}
         <Link href="https://openfreemap.org" target="_blank" rel="noreferrer">
           OpenFreeMap
+        </Link>{" "}
+        with hillshaded relief from{" "}
+        <Link href="https://mapterhorn.com/" target="_blank" rel="noreferrer">
+          Mapterhorn
         </Link>
         .
       </Typography>
