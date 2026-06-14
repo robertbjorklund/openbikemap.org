@@ -1,16 +1,18 @@
-import { Box, Typography } from "@mui/material";
+import { Box, Link, Typography } from "@mui/material";
 
 import type * as maplibregl from "maplibre-gl";
 
 import * as React from "react";
 
-import { ROUTE_NETWORK_LABELS, RouteNetwork } from "../types/RouteNetwork";
+import { ROUTE_NETWORK_LABELS, RouteNetwork, formatRouteDisplayTitle } from "../types/RouteNetwork";
 
 import type { RouteFeature } from "../types/FeatureTypes";
 
 import { getSegmentCount } from "../utils/FeatureGroup";
 
 import { formatLength, getFeatureLengthMeters } from "../utils/Length";
+
+import { formatRouteStageLabel } from "../utils/RouteStage";
 
 import { CardHeader } from "./CardHeader";
 
@@ -30,6 +32,8 @@ import { ScrollableCard } from "./ScrollableCard";
 
 import { SourceSummary } from "./SourceSummary";
 
+import type { RouteGroupSelection } from "./SelectedObject";
+
 import { useUnitSystem } from "./UnitSystemManager";
 
 
@@ -37,6 +41,10 @@ import { useUnitSystem } from "./UnitSystemManager";
 function RouteInfoBody({
 
   feature,
+
+  routeGroup,
+
+  eventBus,
 
   showTitle = true,
 
@@ -48,6 +56,10 @@ function RouteInfoBody({
 
   feature: RouteFeature;
 
+  routeGroup?: RouteGroupSelection;
+
+  eventBus?: EventBus;
+
   showTitle?: boolean;
 
   showPanelActions?: boolean;
@@ -58,8 +70,10 @@ function RouteInfoBody({
 
   const { properties } = feature;
 
-  const title = properties.name || properties.ref || "Bicycle route";
+  const title = formatRouteDisplayTitle(properties.name, properties.ref);
 
+  const stageLabel = formatRouteStageLabel(properties);
+  const isStageView = !!routeGroup?.activeStageId;
   const networkLabel =
 
     properties.network &&
@@ -68,10 +82,10 @@ function RouteInfoBody({
 
       properties.network);
 
-  const subtitle = networkLabel
-
+  const subtitle = isStageView && stageLabel
+    ? stageLabel
+    : networkLabel
     ? `Bicycle route · ${networkLabel}`
-
     : "Bicycle route";
 
   const segmentCount = getSegmentCount(feature);
@@ -82,33 +96,47 @@ function RouteInfoBody({
 
 
 
+  const networkIcon = (
+    <RouteNetworkLegendIcon
+      network={properties.network}
+      label={properties.ref}
+      name={properties.name}
+      size={TITLE_ICON_SIZE}
+    />
+  );
+
   return (
 
     <>
 
-      {showTitle && (
-
+      {showTitle ? (
         <InfoFeatureHeader
           title={title}
           subtitle={subtitle}
-          icon={
-            <RouteNetworkLegendIcon
-              network={properties.network}
-              size={TITLE_ICON_SIZE}
-            />
-          }
+          icon={networkIcon}
         />
-
+      ) : (
+        <InfoFeatureHeader subtitle={subtitle} />
       )}
 
-      {properties.ref && properties.name && (
-
-        <Typography color="text.secondary" gutterBottom>
-
-          Ref: {properties.ref}
-
+      {routeGroup && !routeGroup.activeStageId && (
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          {routeGroup.stageFeatures.length} etapper · hover to preview, click to
+          select one
         </Typography>
+      )}
 
+      {routeGroup?.activeStageId && (
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          <Link
+            component="button"
+            variant="body2"
+            onClick={() => eventBus?.showRouteGroupOverview()}
+            sx={{ cursor: "pointer" }}
+          >
+            ← View whole route
+          </Link>
+        </Typography>
       )}
 
       {length && <Typography gutterBottom>Length: {length}</Typography>}
@@ -181,13 +209,19 @@ export const RouteInfo: React.FunctionComponent<{
 
   eventBus: EventBus;
 
+  routeGroup?: RouteGroupSelection;
+
   width?: number;
 
   embedded?: boolean;
 
+  showFeatureTitle?: boolean;
+
   map?: maplibregl.Map;
 
 }> = (props) => {
+
+  const showTitle = props.showFeatureTitle ?? true;
 
   if (props.embedded) {
 
@@ -196,6 +230,12 @@ export const RouteInfo: React.FunctionComponent<{
       <RouteInfoBody
 
         feature={props.feature}
+
+        routeGroup={props.routeGroup}
+
+        eventBus={props.eventBus}
+
+        showTitle={showTitle}
 
         showPanelActions
 
@@ -222,6 +262,10 @@ export const RouteInfo: React.FunctionComponent<{
       <RouteInfoBody
 
         feature={props.feature}
+
+        routeGroup={props.routeGroup}
+
+        eventBus={props.eventBus}
 
         showPanelActions
 

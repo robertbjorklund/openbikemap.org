@@ -1,3 +1,4 @@
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import CloseIcon from "@mui/icons-material/Close";
 import { Box, Divider, IconButton, Paper, Typography } from "@mui/material";
 import * as React from "react";
@@ -6,11 +7,17 @@ import { AppConfig } from "../AppConfig";
 export const PanelShell: React.FunctionComponent<
   React.PropsWithChildren<{
     title?: string;
+    titleIcon?: React.ReactNode;
     onClose: () => void;
+    onBack?: () => void;
+    showBack?: boolean;
     actions?: React.ReactNode;
     footer?: React.ReactNode;
   }>
 > = (props) => {
+  const showBack = props.showBack ?? true;
+  const onBack = props.onBack ?? props.onClose;
+
   return (
     <Paper
       elevation={3}
@@ -30,9 +37,20 @@ export const PanelShell: React.FunctionComponent<
           flexShrink: 0,
           display: "flex",
           alignItems: "center",
-          gap: 1,
+          gap: 0.5,
         }}
       >
+        {showBack && (
+          <IconButton
+            aria-label="Back"
+            onClick={onBack}
+            size="small"
+            edge="start"
+            sx={{ ml: -0.5, flexShrink: 0 }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+        )}
         <Typography
           variant="h6"
           sx={{
@@ -58,10 +76,24 @@ export const PanelShell: React.FunctionComponent<
 
       <Divider />
 
-      {(props.title || props.actions) && (
-        <Box sx={{ px: 2, pt: 1.5, pb: props.actions ? 1 : 0, flexShrink: 0 }}>
+      {(props.title || props.titleIcon || props.actions) && (
+        <Box
+          sx={{
+            px: 2,
+            pt: 1.5,
+            pb: props.actions ? 1 : 0,
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          {props.titleIcon}
           {props.title && (
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{ fontWeight: 600, flex: 1, minWidth: 0 }}
+            >
               {props.title}
             </Typography>
           )}

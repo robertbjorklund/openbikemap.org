@@ -13,11 +13,19 @@ import {
 
   BikeActivity,
 
+  IMBA_SCALE_FILTERS,
+
+  IMBA_SCALE_NOT_SET,
+
+  IMBA_SCALES,
+
   MTB_SCALE_FILTERS,
 
   MTB_SCALE_NOT_SET,
 
   MTB_SCALES,
+
+  type MtbImbaScaleFilter,
 
   type MtbScaleFilter,
 
@@ -71,15 +79,35 @@ const BASEMAP_PATH_LAYER_IDS = [
 
 ] as const;
 
-const TRAIL_LAYER_IDS = [
+const TRAIL_STS_LAYER_IDS = [
 
   "trails-casing",
 
   "trails",
 
+] as const;
+
+const TRAIL_IMBA_LAYER_IDS = [
+
+  "trails-imba",
+
+] as const;
+
+const TRAIL_COMBINED_LAYER_IDS = [
+
   "trails-label",
 
   "tappable-trail",
+
+] as const;
+
+const TRAIL_LAYER_IDS = [
+
+  ...TRAIL_STS_LAYER_IDS,
+
+  ...TRAIL_IMBA_LAYER_IDS,
+
+  ...TRAIL_COMBINED_LAYER_IDS,
 
 ] as const;
 
@@ -97,14 +125,6 @@ const ROUTE_LAYER_IDS = [
 
 
 
-function mtbScaleNumber(): maplibregl.ExpressionSpecification {
-
-  return ["to-number", ["get", "mtbScale"]];
-
-}
-
-
-
 function isActivityEnabled(
 
   filters: MapFilters,
@@ -115,6 +135,52 @@ function isActivityEnabled(
 
   return !filters.hiddenActivities.includes(activity);
 
+}
+
+
+
+/** True when mtb:scale:imba is 0–4 (match avoids has/to-number MVT quirks). */
+function isImbaTrailExpression(): maplibregl.ExpressionFilterSpecification {
+  return [
+    "match",
+    ["get", "mtbScaleImba"],
+    0,
+    true,
+    1,
+    true,
+    2,
+    true,
+    3,
+    true,
+    4,
+    true,
+    false,
+  ];
+}
+
+
+
+function hasKnownScaleExpression(
+  property: "mtbScale" | "mtbScaleImba",
+  visibleNumbers: readonly number[],
+): maplibregl.ExpressionFilterSpecification {
+  return [
+    "all",
+    ["has", property],
+    [
+      "in",
+      ["to-number", ["get", property]],
+      ["literal", [...visibleNumbers]],
+    ],
+  ];
+}
+
+function scaleMatchExpression(
+  property: "mtbScale" | "mtbScaleImba",
+  _knownScales: readonly number[],
+  visibleNumbers: readonly number[],
+): maplibregl.ExpressionFilterSpecification {
+  return hasKnownScaleExpression(property, visibleNumbers);
 }
 
 
@@ -149,84 +215,126 @@ function mtbScaleFilter(
 
 
 
-  const mtbScaleConditions: maplibregl.ExpressionFilterSpecification[] = [];
+  const conditions: maplibregl.ExpressionFilterSpecification[] = [];
 
 
 
   if (!hideNotSet) {
-
-    mtbScaleConditions.push(["!", ["has", "mtbScale"]]);
-
+    conditions.push(["!", ["has", "mtbScale"]]);
   }
 
   if (visibleNumbers.length > 0) {
-
-    mtbScaleConditions.push([
-
-      "in",
-
-      mtbScaleNumber(),
-
-      ["literal", visibleNumbers],
-
-    ]);
-
+    conditions.push(
+      scaleMatchExpression("mtbScale", MTB_SCALES, visibleNumbers),
+    );
   }
 
 
 
-  if (mtbScaleConditions.length === 0) {
-
-    return ["!=", ["get", "category"], TrailCategory.MtbTrail];
-
+  if (conditions.length === 0) {
+    return ["==", ["get", "id"], ""];
   }
 
 
 
-  return [
-
-    "any",
-
-    ["!=", ["get", "category"], TrailCategory.MtbTrail],
-
-    ...mtbScaleConditions,
-
-  ];
+  return conditions.length === 1 ? conditions[0] : ["any", ...conditions];
 
 }
 
 
 
-function getTrailsFilter(filters: MapFilters): ObjectFilterRules {
+function mtbImbaScaleFilter(
 
+  filters: MapFilters,
+
+): maplibregl.ExpressionFilterSpecification | null {
+
+  if (filters.hiddenMtbImbaScales.length === 0) {
+
+    return null;
+
+  }
+
+
+
+  const hiddenNumbers = filters.hiddenMtbImbaScales.filter(
+
+    (value): value is (typeof IMBA_SCALES)[number] => typeof value === "number",
+
+  );
+
+  const visibleNumbers = IMBA_SCALES.filter(
+
+    (scale) => !hiddenNumbers.includes(scale),
+
+  );
+
+
+
+  if (visibleNumbers.length === 0) {
+    return ["==", ["get", "id"], ""];
+  }
+
+
+
+  return scaleMatchExpression("mtbScaleImba", IMBA_SCALES, visibleNumbers);
+
+}
+
+
+
+function buildTrailLayerFilter(
+  filters: MapFilters,
+  layerId: string,
+): ObjectFilterRules {
   if (!isActivityEnabled(filters, BikeActivity.Mtb)) {
-
     return "hidden";
-
   }
 
+  const stsScaleFilter = mtbScaleFilter(filters);
+  const imbaScaleFilter = mtbImbaScaleFilter(filters);
 
+  const stsBranch = (
+    extra: maplibregl.ExpressionFilterSpecification[],
+  ): maplibregl.ExpressionFilterSpecification => {
+    const parts: maplibregl.ExpressionFilterSpecification[] = [
+      ["!", isImbaTrailExpression()],
+      ...extra,
+    ];
+    return parts.length === 1 ? parts[0] : ["all", ...parts];
+  };
 
-  const parts: maplibregl.ExpressionFilterSpecification[] = [
+  const imbaBranch = (
+    extra: maplibregl.ExpressionFilterSpecification[],
+  ): maplibregl.ExpressionFilterSpecification => {
+    const parts: maplibregl.ExpressionFilterSpecification[] = [
+      isImbaTrailExpression(),
+      ...extra,
+    ];
+    return parts.length === 1 ? parts[0] : ["all", ...parts];
+  };
 
-    ["==", ["get", "category"], TrailCategory.MtbTrail],
-
-  ];
-
-
-
-  const scaleFilter = mtbScaleFilter(filters);
-
-  if (scaleFilter) {
-
-    parts.push(scaleFilter);
-
+  if ((TRAIL_IMBA_LAYER_IDS as readonly string[]).includes(layerId)) {
+    return imbaScaleFilter
+      ? imbaBranch([imbaScaleFilter])
+      : imbaBranch([]);
   }
 
+  if ((TRAIL_STS_LAYER_IDS as readonly string[]).includes(layerId)) {
+    return stsScaleFilter
+      ? stsBranch([stsScaleFilter])
+      : stsBranch([]);
+  }
 
+  if ((TRAIL_COMBINED_LAYER_IDS as readonly string[]).includes(layerId)) {
+    const branches: maplibregl.ExpressionFilterSpecification[] = [
+      stsScaleFilter ? stsBranch([stsScaleFilter]) : stsBranch([]),
+      imbaScaleFilter ? imbaBranch([imbaScaleFilter]) : imbaBranch([]),
+    ];
+    return ["any", ...branches];
+  }
 
-  return parts.length === 1 ? parts[0] : ["all", ...parts];
-
+  return null;
 }
 
 
@@ -254,9 +362,7 @@ function getRouteNetworkFilter(
 
 
   if (visibleNetworks.length === 0) {
-
-    return ["literal", false];
-
+    return ["==", ["get", "id"], ""];
   }
 
 
@@ -303,7 +409,7 @@ export function getFilterRules(filters: MapFilters): MapFilterRules {
 
   return {
 
-    trails: getTrailsFilter(filters),
+    trails: buildTrailLayerFilter(filters, "trails"),
 
     routes: getRoutesFilter(filters),
 
@@ -316,9 +422,13 @@ export function isMtbActivityVisible(filters: MapFilters): boolean {
   if (!isActivityEnabled(filters, BikeActivity.Mtb)) {
     return false;
   }
-  return !MTB_SCALE_FILTERS.every((scale) =>
+  const stsVisible = !MTB_SCALE_FILTERS.every((scale) =>
     filters.hiddenMtbScales.includes(scale),
   );
+  const imbaVisible = !IMBA_SCALE_FILTERS.every((scale) =>
+    filters.hiddenMtbImbaScales.includes(scale),
+  );
+  return stsVisible || imbaVisible;
 }
 
 /** True when any bicycle route may be drawn (parent on and some network visible). */
@@ -367,15 +477,57 @@ function isMtbScaleVisibleUnderFilter(
   return false;
 }
 
+/** JS mirror of mtbImbaScaleFilter() for a single feature's mtbScaleImba. */
+function isMtbImbaScaleVisibleUnderFilter(
+  mtbScaleImba: number | null,
+  hiddenMtbImbaScales: MtbImbaScaleFilter[],
+): boolean {
+  if (hiddenMtbImbaScales.length === 0) {
+    return true;
+  }
+
+  const hideNotSet = hiddenMtbImbaScales.includes(IMBA_SCALE_NOT_SET);
+  const hiddenNumbers = hiddenMtbImbaScales.filter(
+    (value): value is (typeof IMBA_SCALES)[number] => typeof value === "number",
+  );
+  const visibleNumbers = IMBA_SCALES.filter(
+    (scale) => !hiddenNumbers.includes(scale),
+  );
+
+  if (hideNotSet && visibleNumbers.length === 0) {
+    return false;
+  }
+
+  if (!hideNotSet && mtbScaleImba === null) {
+    return true;
+  }
+
+  if (
+    mtbScaleImba !== null &&
+    (IMBA_SCALES as readonly number[]).includes(mtbScaleImba) &&
+    visibleNumbers.includes(mtbScaleImba as (typeof IMBA_SCALES)[number])
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 function isTrailVisibleUnderFilters(
   properties: TrailProperties,
   filters: MapFilters,
 ): boolean {
-  if (getTrailsFilter(filters) === "hidden") {
+  if (!isActivityEnabled(filters, BikeActivity.Mtb)) {
     return false;
   }
   if (properties.category !== TrailCategory.MtbTrail) {
     return false;
+  }
+  if (properties.mtbScaleImba !== null) {
+    return isMtbImbaScaleVisibleUnderFilter(
+      properties.mtbScaleImba,
+      filters.hiddenMtbImbaScales,
+    );
   }
   return isMtbScaleVisibleUnderFilter(
     properties.mtbScale,
@@ -524,7 +676,7 @@ export function applyFiltersToStyleLayers(
   layers: maplibregl.LayerSpecification[],
   filters: MapFilters,
 ): maplibregl.LayerSpecification[] {
-  const filterRules = getFilterRules(filters);
+  const routesFilter = getRoutesFilter(filters);
   const mtbVisible = isMtbActivityVisible(filters);
   const routesVisible = isRoutesActivityVisible(filters);
 
@@ -538,35 +690,19 @@ export function applyFiltersToStyleLayers(
     }
 
     if (layer["source-layer"] === "trails") {
-      return applySourceLayerFilters(layer, mtbVisible, filterRules.trails);
+      return applySourceLayerFilters(
+        layer,
+        mtbVisible,
+        buildTrailLayerFilter(filters, layer.id),
+      );
     }
 
     if (layer["source-layer"] === "routes") {
-      return applySourceLayerFilters(layer, routesVisible, filterRules.routes);
+      return applySourceLayerFilters(layer, routesVisible, routesFilter);
     }
 
     return layer;
   });
-}
-
-function applyLayerGroupToMap(
-  map: maplibregl.Map,
-  layerIds: readonly string[],
-  groupVisible: boolean,
-  filterRule: ObjectFilterRules,
-): void {
-  const hideGroup = !groupVisible || filterRule === "hidden";
-  const visibility: "visible" | "none" = hideGroup ? "none" : "visible";
-  const filter: maplibregl.FilterSpecification | null =
-    hideGroup || filterRule === null ? null : filterRule;
-
-  for (const layerId of layerIds) {
-    if (!map.getLayer(layerId)) {
-      continue;
-    }
-    map.setLayoutProperty(layerId, "visibility", visibility);
-    map.setFilter(layerId, filter);
-  }
 }
 
 function hideBasemapPathLayers(map: maplibregl.Map): void {
@@ -579,30 +715,98 @@ function hideBasemapPathLayers(map: maplibregl.Map): void {
   }
 }
 
+const FILTER_SET_OPTIONS = { validate: false } as const;
+
+function applyTrailLayerToMap(
+  map: maplibregl.Map,
+  layerId: string,
+  mtbVisible: boolean,
+  filters: MapFilters,
+): void {
+  if (!map.getLayer(layerId)) {
+    if (import.meta.env.DEV) {
+      console.warn(`[filters] layer not found: ${layerId}`);
+    }
+    return;
+  }
+
+  const filterRule = buildTrailLayerFilter(filters, layerId);
+  const hideGroup = !mtbVisible || filterRule === "hidden";
+  map.setLayoutProperty(layerId, "visibility", hideGroup ? "none" : "visible");
+  map.setFilter(
+    layerId,
+    hideGroup || filterRule === null ? null : filterRule,
+    FILTER_SET_OPTIONS,
+  );
+}
+
+function applyRouteLayerToMap(
+  map: maplibregl.Map,
+  layerId: string,
+  routesVisible: boolean,
+  routesFilter: ObjectFilterRules,
+): void {
+  if (!map.getLayer(layerId)) {
+    if (import.meta.env.DEV) {
+      console.warn(`[filters] layer not found: ${layerId}`);
+    }
+    return;
+  }
+
+  const hideGroup = !routesVisible || routesFilter === "hidden";
+  map.setLayoutProperty(layerId, "visibility", hideGroup ? "none" : "visible");
+  map.setFilter(
+    layerId,
+    hideGroup || routesFilter === null ? null : routesFilter,
+    FILTER_SET_OPTIONS,
+  );
+}
+
 /** Apply filter rules to the live map (immediate checkbox response). */
 export function applyFilterRulesToMap(
   map: maplibregl.Map,
   filters: MapFilters,
 ): void {
-  if (!map.isStyleLoaded()) {
+  const style = map.getStyle();
+  if (!style?.layers?.length) {
     return;
   }
 
-  const rules = getFilterRules(filters);
+  const routesFilter = getRoutesFilter(filters);
+  const mtbVisible = isMtbActivityVisible(filters);
+  const routesVisible = isRoutesActivityVisible(filters);
 
-  applyLayerGroupToMap(
-    map,
-    TRAIL_LAYER_IDS,
-    isMtbActivityVisible(filters),
-    rules.trails,
-  );
+  for (const layerId of TRAIL_LAYER_IDS) {
+    if (!map.getLayer(layerId)) {
+      continue;
+    }
+    applyTrailLayerToMap(map, layerId, mtbVisible, filters);
+  }
 
-  applyLayerGroupToMap(
-    map,
-    ROUTE_LAYER_IDS,
-    isRoutesActivityVisible(filters),
-    rules.routes,
-  );
+  for (const layerId of ROUTE_LAYER_IDS) {
+    if (!map.getLayer(layerId)) {
+      continue;
+    }
+    applyRouteLayerToMap(map, layerId, routesVisible, routesFilter);
+  }
+
+  // Any openbikemap trail/route layers added in newer styles.
+  for (const layer of map.getStyle().layers) {
+    if (!hasSource(layer) || layer.source !== "openbikemap") {
+      continue;
+    }
+    if ((TRAIL_LAYER_IDS as readonly string[]).includes(layer.id)) {
+      continue;
+    }
+    if ((ROUTE_LAYER_IDS as readonly string[]).includes(layer.id)) {
+      continue;
+    }
+    if (layer["source-layer"] === "trails") {
+      applyTrailLayerToMap(map, layer.id, mtbVisible, filters);
+    } else if (layer["source-layer"] === "routes") {
+      applyRouteLayerToMap(map, layer.id, routesVisible, routesFilter);
+    }
+  }
 
   hideBasemapPathLayers(map);
   map.triggerRepaint();

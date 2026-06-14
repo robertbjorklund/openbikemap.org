@@ -88,8 +88,9 @@ export const SidePanelRail: React.FunctionComponent<{
 
       <div className="side-panel-rail-bottom">
         <IconButton
-          className={railButtonClass(false)}
+          className={railButtonClass(isActive("cookiePolicy"))}
           aria-label="Cookie policy"
+          aria-pressed={isActive("cookiePolicy")}
           title="Cookie policy"
           onClick={props.onOpenCookiePolicy}
         >

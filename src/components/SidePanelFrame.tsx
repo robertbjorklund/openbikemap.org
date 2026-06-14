@@ -1,7 +1,5 @@
 import * as React from "react";
 
-import { openCookiePolicy } from "./ExternalURLOpener";
-
 import EventBus from "./EventBus";
 
 import { SearchBox } from "./SearchBox";
@@ -74,7 +72,9 @@ export const SidePanelFrame: React.FunctionComponent<
 
           onOpenAbout={withSearchClosed(() => props.eventBus.openAboutInfo())}
 
-          onOpenCookiePolicy={withSearchClosed(openCookiePolicy)}
+          onOpenCookiePolicy={withSearchClosed(() =>
+            props.eventBus.openCookiePolicy(),
+          )}
 
         />
 

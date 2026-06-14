@@ -5,6 +5,7 @@ export type SidePanelView =
   | "settings"
   | "credits"
   | "about"
+  | "cookiePolicy"
   | null;
 
 export type SidePanelNavView = Exclude<SidePanelView, null>;

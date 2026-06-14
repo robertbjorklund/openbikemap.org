@@ -102,3 +102,83 @@ export const MTB_SCALE_FILTER_LABELS: Record<MtbScaleFilter, string> = {
 
 };
 
+
+
+/** OSM mtb:scale:imba (0–4) — IMBA trail difficulty */
+
+export const IMBA_SCALES = [0, 1, 2, 3, 4] as const;
+
+
+
+export const IMBA_SCALE_NOT_SET = "not_set" as const;
+
+
+
+export type MtbImbaScaleFilter =
+
+  | (typeof IMBA_SCALES)[number]
+
+  | typeof IMBA_SCALE_NOT_SET;
+
+
+
+export const IMBA_SCALE_FILTERS: readonly MtbImbaScaleFilter[] = [
+
+  ...IMBA_SCALES,
+
+  IMBA_SCALE_NOT_SET,
+
+];
+
+
+
+export const IMBA_SCALE_LABELS: Record<number, string> = {
+
+  0: "0 — Easiest",
+
+  1: "1 — Easy",
+
+  2: "2 — More difficult",
+
+  3: "3 — Very difficult",
+
+  4: "4 — Extremely difficult",
+
+};
+
+
+
+export function toMtbImbaScaleFilter(
+
+  mtbScaleImba: number | null,
+
+): MtbImbaScaleFilter {
+
+  if (mtbScaleImba === null) {
+
+    return IMBA_SCALE_NOT_SET;
+
+  }
+
+  return mtbScaleImba as (typeof IMBA_SCALES)[number];
+
+}
+
+
+
+export const IMBA_SCALE_FILTER_LABELS: Record<MtbImbaScaleFilter, string> = {
+
+  0: IMBA_SCALE_LABELS[0],
+
+  1: IMBA_SCALE_LABELS[1],
+
+  2: IMBA_SCALE_LABELS[2],
+
+  3: IMBA_SCALE_LABELS[3],
+
+  4: IMBA_SCALE_LABELS[4],
+
+  [IMBA_SCALE_NOT_SET]: "Not set",
+
+};
+

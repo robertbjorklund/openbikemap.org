@@ -10,14 +10,19 @@ import EventBus from "./EventBus";
 import { RouteInfo } from "./RouteInfo";
 import { TrailInfo } from "./TrailInfo";
 
+import type { RouteGroupSelection } from "./SelectedObject";
+
 export const Info: React.FunctionComponent<{
   feature: MapFeature;
   eventBus: EventBus;
+  routeGroup?: RouteGroupSelection;
   width?: number;
   embedded?: boolean;
+  showFeatureTitle?: boolean;
   map?: maplibregl.Map;
 }> = (props) => {
   const { feature } = props;
+  const showFeatureTitle = props.showFeatureTitle ?? true;
 
   if (feature.properties.type === FeatureType.Trail) {
     return (
@@ -26,6 +31,7 @@ export const Info: React.FunctionComponent<{
         eventBus={props.eventBus}
         width={props.width}
         embedded={props.embedded}
+        showFeatureTitle={showFeatureTitle}
         map={props.map}
       />
     );
@@ -35,8 +41,10 @@ export const Info: React.FunctionComponent<{
     <RouteInfo
       feature={feature as RouteFeature}
       eventBus={props.eventBus}
+      routeGroup={props.routeGroup}
       width={props.width}
       embedded={props.embedded}
+      showFeatureTitle={showFeatureTitle}
       map={props.map}
     />
   );

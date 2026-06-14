@@ -6,7 +6,11 @@ import * as React from "react";
 
 import {
 
+  IMBA_SCALE_FILTER_LABELS,
+
   MTB_SCALE_FILTER_LABELS,
+
+  toMtbImbaScaleFilter,
 
   toMtbScaleFilter,
 
@@ -14,7 +18,7 @@ import {
 
 import {
 
-  FeatureType,
+  TrailCategory,
 
   TRAIL_CATEGORY_LABELS,
 
@@ -41,6 +45,8 @@ import {
 } from "./InfoFeatureHeader";
 
 import { InfoPanelActions } from "./InfoPanelActions";
+
+import { MtbImbaLegendIcon } from "./MtbImbaLegendIcon";
 
 import { MtbScaleLegendIcon } from "./MtbScaleLegendIcon";
 
@@ -86,9 +92,55 @@ function TrailInfoBody({
 
   const segmentCount = getSegmentCount(feature);
 
-  const scale = toMtbScaleFilter(properties.mtbScale);
+  const isMtbTrail = properties.category === TrailCategory.MtbTrail;
 
-  const subtitle = `${TRAIL_CATEGORY_LABELS[properties.category]} · ${MTB_SCALE_FILTER_LABELS[scale]}`;
+  const isImbaTrail = properties.mtbScaleImba !== null;
+
+  const scale = isImbaTrail
+
+    ? toMtbImbaScaleFilter(properties.mtbScaleImba)
+
+    : toMtbScaleFilter(properties.mtbScale);
+
+  const scaleLabel = isImbaTrail
+
+    ? IMBA_SCALE_FILTER_LABELS[scale as ReturnType<typeof toMtbImbaScaleFilter>]
+
+    : MTB_SCALE_FILTER_LABELS[scale as ReturnType<typeof toMtbScaleFilter>];
+
+  const ratingSystemLabel = isImbaTrail
+
+    ? "IMBA — International Mountain Bicycling Association"
+
+    : "STS — Single Track Scale";
+
+  const subtitle = TRAIL_CATEGORY_LABELS[properties.category];
+
+  const difficultyIcon = isMtbTrail ? (
+
+    isImbaTrail ? (
+
+      <MtbImbaLegendIcon
+
+        scale={scale as ReturnType<typeof toMtbImbaScaleFilter>}
+
+        size={TITLE_ICON_SIZE}
+
+      />
+
+    ) : (
+
+      <MtbScaleLegendIcon
+
+        scale={scale as ReturnType<typeof toMtbScaleFilter>}
+
+        size={TITLE_ICON_SIZE}
+
+      />
+
+    )
+
+  ) : undefined;
 
 
 
@@ -104,21 +156,37 @@ function TrailInfoBody({
 
           subtitle={subtitle}
 
-          icon={
-
-            properties.type === FeatureType.Trail ? (
-
-              <MtbScaleLegendIcon scale={scale} size={TITLE_ICON_SIZE} />
-
-            ) : undefined
-
-          }
+          icon={difficultyIcon}
 
         />
 
       )}
 
+      {!showTitle && subtitle && (
 
+        <InfoFeatureHeader subtitle={subtitle} />
+
+      )}
+
+      {isMtbTrail && (
+
+        <Box sx={{ mb: 1.5 }}>
+
+          <Typography variant="body2" fontWeight={500}>
+
+            {ratingSystemLabel}
+
+          </Typography>
+
+          <Typography variant="body2" color="text.secondary">
+
+            {scaleLabel}
+
+          </Typography>
+
+        </Box>
+
+      )}
 
       {length && <Typography gutterBottom>Length: {length}</Typography>}
 
@@ -190,9 +258,13 @@ export const TrailInfo: React.FunctionComponent<{
 
   embedded?: boolean;
 
+  showFeatureTitle?: boolean;
+
   map?: maplibregl.Map;
 
 }> = (props) => {
+
+  const showTitle = props.showFeatureTitle ?? true;
 
   if (props.embedded) {
 
@@ -201,6 +273,8 @@ export const TrailInfo: React.FunctionComponent<{
       <TrailInfoBody
 
         feature={props.feature}
+
+        showTitle={showTitle}
 
         showPanelActions
 

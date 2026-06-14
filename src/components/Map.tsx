@@ -3,8 +3,10 @@ import { throttle } from "throttle-debounce";
 import MapFilters, { defaultMapFilters } from "../MapFilters";
 import { MapMarker } from "../MapMarker";
 import { MAP_STYLE_URLS, MapStyle } from "../MapStyle";
-import type { MapFeature } from "../types/FeatureTypes";
+import { FeatureType, type MapFeature } from "../types/FeatureTypes";
 import { featuresForHighlight } from "../utils/FeatureGroup";
+import { findRouteStageFeature } from "../utils/routeGroupSelection";
+import { formatRouteStageTooltip } from "../utils/RouteStage";
 import {
   CameraPosition,
   CameraPositionManager,
@@ -24,13 +26,17 @@ import { EsriAttribution } from "./EsriAttribution";
 import { LogoControl } from "./LogoControl";
 import { LayersControl } from "./LayersControl";
 import { registerSatelliteTileProtocol } from "./SatelliteTileProtocol";
-import { SelectedObject } from "./SelectedObject";
+import { SelectedObject, type RouteGroupSelection } from "./SelectedObject";
 import { SidePanelControl } from "./SidePanelControl";
 import State from "./State";
-import { addUnitSystemChangeListener_NonReactive } from "./UnitSystemManager";
+import { addUnitSystemChangeListener_NonReactive, getUnitSystem } from "./UnitSystemManager";
 
 const SELECTED_SOURCE_ID = "openbikemap-selected";
 const SELECTED_LAYER_ID = "openbikemap-selected-line";
+const SELECTED_GROUP_SOURCE_ID = "openbikemap-selected-group";
+const SELECTED_GROUP_LAYER_ID = "openbikemap-selected-group-line";
+const SELECTED_STAGE_SOURCE_ID = "openbikemap-selected-stage";
+const SELECTED_STAGE_LAYER_ID = "openbikemap-selected-stage-line";
 
 export class Map {
   private map: maplibregl.Map;
@@ -43,6 +49,9 @@ export class Map {
   private attributionControl: maplibregl.AttributionControl;
   private mapScaleControl: maplibregl.ScaleControl;
   private selectedFeature: MapFeature | null = null;
+  private routeGroupSelection: RouteGroupSelection | null = null;
+  private hoveredStageId: string | null = null;
+  private stageTooltipEl: HTMLDivElement;
 
   constructor(
     cameraPosition: CameraPosition,
@@ -66,7 +75,16 @@ export class Map {
       cooperativeGestures: isEmbedded,
     });
 
-    new MapInteractionManager(this.map, eventBus);
+    this.stageTooltipEl = document.createElement("div");
+    this.stageTooltipEl.className = "route-stage-tooltip";
+    this.stageTooltipEl.hidden = true;
+    this.map.getContainer().appendChild(this.stageTooltipEl);
+
+    new MapInteractionManager(this.map, eventBus, {
+      getRouteGroup: () => this.routeGroupSelection,
+      getLockedRouteGroupId: () => this.getLockedRouteGroupId(),
+      onStageHover: (stageId, point) => this.setHoveredRouteStage(stageId, point),
+    });
 
     this.sidePanelControl = new SidePanelControl(
       eventBus,
@@ -123,6 +141,11 @@ export class Map {
     });
 
     this.map.on("moveend", saveCamera);
+    this.map.on("error", (event) => {
+      if (import.meta.env.DEV && event.error?.message) {
+        console.warn("[map]", event.error.message);
+      }
+    });
     this.map.on("style.load", () => {
       applyPaintRulesToMap(this.map);
       applyFilterRulesToMap(this.map, this.currentFilters);
@@ -139,60 +162,64 @@ export class Map {
     });
   }
 
+  private transformLoadedStyle = (
+    newStyle: maplibregl.StyleSpecification,
+  ): maplibregl.StyleSpecification => {
+    let transformed: maplibregl.StyleSpecification = newStyle;
+
+    if (
+      transformed.sources.satellite &&
+      transformed.sources.satellite.type === "raster"
+    ) {
+      transformed = {
+        ...transformed,
+        sources: {
+          ...transformed.sources,
+          satellite: {
+            ...transformed.sources.satellite,
+            tiles: ["satellite-filtered://{z}/{y}/{x}"],
+          },
+        },
+      };
+    }
+
+    return {
+      ...transformed,
+      layers: applyPaintRulesToStyleLayers(
+        applyFiltersToStyleLayers(transformed.layers, this.currentFilters),
+      ),
+    };
+  };
+
   setStyle(style: MapStyle): void {
     if (this.currentStyle === style) {
       return;
     }
     this.currentStyle = style;
     this.map.setStyle(MAP_STYLE_URLS[style], {
-      transformStyle: (_, newStyle) => {
-        let transformed: maplibregl.StyleSpecification = newStyle;
-
-        if (
-          transformed.sources.satellite &&
-          transformed.sources.satellite.type === "raster"
-        ) {
-          transformed = {
-            ...transformed,
-            sources: {
-              ...transformed.sources,
-              satellite: {
-                ...transformed.sources.satellite,
-                tiles: ["satellite-filtered://{z}/{y}/{x}"],
-              },
-            },
-          };
-        }
-
-        return {
-          ...transformed,
-          layers: applyPaintRulesToStyleLayers(
-            applyFiltersToStyleLayers(
-              transformed.layers,
-              this.currentFilters,
-            ),
-          ),
-        };
-      },
+      transformStyle: (_, newStyle) => this.transformLoadedStyle(newStyle),
     });
   }
+
+  private applyFiltersToLiveMap = (): void => {
+    applyFilterRulesToMap(this.map, this.currentFilters);
+    applyPaintRulesToMap(this.map);
+  };
 
   private setFiltersUnthrottled = (filters: MapFilters) => {
     this.currentFilters = filters;
     this.sidePanelControl.updateMapFilters(filters);
-    this.updateSelectedHighlight();
-    const apply = () => {
-      applyFilterRulesToMap(this.map, filters);
-      applyPaintRulesToMap(this.map);
-    };
+
     if (this.map.isStyleLoaded()) {
-      apply();
-      return;
+      this.applyFiltersToLiveMap();
+    } else {
+      this.map.once("style.load", () => this.applyFiltersToLiveMap());
     }
-    this.map.once("style.load", apply);
+
+    this.updateSelectedHighlight();
   };
 
-  setFilters = throttle(100, this.setFiltersUnthrottled);
+  setFilters = this.setFiltersUnthrottled;
 
   updateSidePanel(state: State): void {
     this.layersControl.setStyle(state.mapStyle);
@@ -200,25 +227,109 @@ export class Map {
       mapFilters: MapFilters;
       mapStyle: MapStyle;
       infoFeature?: MapFeature | null;
+      routeGroup?: RouteGroupSelection | null;
     } = {
       mapFilters: state.mapFilters,
       mapStyle: state.mapStyle,
     };
     if (state.sidePanelView === "route") {
       viewOptions.infoFeature = state.selectedObject?.feature ?? null;
+      viewOptions.routeGroup = state.selectedObject?.routeGroup ?? null;
     } else {
       viewOptions.infoFeature = null;
+      viewOptions.routeGroup = null;
     }
     this.sidePanelControl.setView(state.sidePanelView, viewOptions);
   }
 
   setSelectedObject(selectedObject: SelectedObject | null | undefined): void {
+    this.routeGroupSelection = selectedObject?.routeGroup ?? null;
+    this.hoveredStageId = null;
+    this.hideStageTooltip();
     const feature =
       selectedObject?.showInfo && selectedObject.feature
         ? selectedObject.feature
         : null;
     this.selectedFeature = feature;
     this.updateSelectedHighlight();
+  }
+
+  setHoveredRouteStage(
+    stageId: string | null,
+    point?: maplibregl.Point,
+  ): void {
+    if (this.hoveredStageId !== stageId) {
+      this.hoveredStageId = stageId;
+      this.updateSelectedHighlight();
+    }
+    this.updateStageTooltip(stageId, point);
+  }
+
+  private hideStageTooltip(): void {
+    this.stageTooltipEl.hidden = true;
+  }
+
+  private updateStageTooltip(
+    stageId: string | null,
+    point?: maplibregl.Point,
+  ): void {
+    if (!stageId || !point || !this.routeGroupSelection) {
+      this.hideStageTooltip();
+      return;
+    }
+
+    const stage = findRouteStageFeature(this.routeGroupSelection, stageId);
+    if (!stage) {
+      this.hideStageTooltip();
+      return;
+    }
+
+    this.stageTooltipEl.textContent = formatRouteStageTooltip(
+      stage,
+      getUnitSystem(),
+    );
+    this.stageTooltipEl.hidden = false;
+    this.positionStageTooltip(point);
+  }
+
+  /** Keep tooltip clear of oversized system cursors (hotspot is usually top-left). */
+  private positionStageTooltip(point: maplibregl.Point): void {
+    const container = this.map.getContainer();
+    const tooltip = this.stageTooltipEl;
+    const padding = 8;
+    const cursorGap = 56;
+    const width = tooltip.offsetWidth;
+    const height = tooltip.offsetHeight;
+    const maxX = Math.max(padding, container.clientWidth - width - padding);
+    const maxY = Math.max(padding, container.clientHeight - height - padding);
+
+    // Prefer above-right of hotspot so large cursors (extending down/right) don't cover it.
+    let x = point.x + 24;
+    let y = point.y - height - cursorGap;
+
+    if (y < padding) {
+      // Not enough room above — place well below/right instead.
+      x = point.x + cursorGap;
+      y = point.y + cursorGap;
+    }
+
+    x = Math.min(Math.max(x, padding), maxX);
+    y = Math.min(Math.max(y, padding), maxY);
+
+    tooltip.style.transform = `translate(${x}px, ${y}px)`;
+  }
+
+  private getLockedRouteGroupId(): string | null {
+    if (this.routeGroupSelection) {
+      return this.routeGroupSelection.groupId;
+    }
+    if (
+      this.selectedFeature?.properties.type === FeatureType.Route &&
+      this.selectedFeature.properties.groupId
+    ) {
+      return this.selectedFeature.properties.groupId;
+    }
+    return null;
   }
 
   setMarkers(markers: MapMarker[]): void {
@@ -237,21 +348,53 @@ export class Map {
   }
 
   private ensureSelectedHighlightLayer(): void {
-    if (!this.map.getSource(SELECTED_SOURCE_ID)) {
-      this.map.addSource(SELECTED_SOURCE_ID, {
+    this.ensureHighlightSourceAndLayer(
+      SELECTED_SOURCE_ID,
+      SELECTED_LAYER_ID,
+      { color: "#fdd835", width: 10 },
+    );
+    this.ensureHighlightSourceAndLayer(
+      SELECTED_GROUP_SOURCE_ID,
+      SELECTED_GROUP_LAYER_ID,
+      { color: "#fdd835", width: 8 },
+    );
+    this.ensureHighlightSourceAndLayer(
+      SELECTED_STAGE_SOURCE_ID,
+      SELECTED_STAGE_LAYER_ID,
+      { color: "#ff9800", width: 14 },
+    );
+
+    for (const layerId of [
+      SELECTED_LAYER_ID,
+      SELECTED_GROUP_LAYER_ID,
+      SELECTED_STAGE_LAYER_ID,
+    ]) {
+      if (this.map.getLayer(layerId)) {
+        this.map.moveLayer(layerId);
+      }
+    }
+  }
+
+  private ensureHighlightSourceAndLayer(
+    sourceId: string,
+    layerId: string,
+    paint: { color: string; width: number },
+  ): void {
+    if (!this.map.getSource(sourceId)) {
+      this.map.addSource(sourceId, {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
       });
     }
 
-    if (!this.map.getLayer(SELECTED_LAYER_ID)) {
+    if (!this.map.getLayer(layerId)) {
       this.map.addLayer({
-        id: SELECTED_LAYER_ID,
+        id: layerId,
         type: "line",
-        source: SELECTED_SOURCE_ID,
+        source: sourceId,
         paint: {
-          "line-color": "#fdd835",
-          "line-width": 10,
+          "line-color": paint.color,
+          "line-width": paint.width,
           "line-opacity": 0.95,
         },
         layout: {
@@ -260,10 +403,17 @@ export class Map {
         },
       });
     }
+  }
 
-    if (this.map.getLayer(SELECTED_LAYER_ID)) {
-      this.map.moveLayer(SELECTED_LAYER_ID);
-    }
+  private setHighlightSourceData(
+    sourceId: string,
+    features: MapFeature[],
+  ): void {
+    const source = this.map.getSource(sourceId) as maplibregl.GeoJSONSource;
+    source.setData({
+      type: "FeatureCollection",
+      features: features.flatMap((feature) => featuresForHighlight(feature)),
+    });
   }
 
   private updateSelectedHighlight(): void {
@@ -273,15 +423,42 @@ export class Map {
 
     this.ensureSelectedHighlightLayer();
 
-    const source = this.map.getSource(SELECTED_SOURCE_ID) as maplibregl.GeoJSONSource;
+    const routeGroup = this.routeGroupSelection;
+    const visibleStages = routeGroup?.stageFeatures.filter(
+      (feature) => isFeatureVisibleUnderFilters(feature, this.currentFilters),
+    );
+
+    if (routeGroup && visibleStages && visibleStages.length > 0) {
+      this.setHighlightSourceData(SELECTED_GROUP_SOURCE_ID, visibleStages);
+      this.setHighlightSourceData(SELECTED_SOURCE_ID, []);
+
+      const orangeStageId = this.hoveredStageId ?? routeGroup.activeStageId;
+      const orangeStage = orangeStageId
+        ? findRouteStageFeature(routeGroup, orangeStageId)
+        : undefined;
+      const visibleOrangeStage =
+        orangeStage &&
+        isFeatureVisibleUnderFilters(orangeStage, this.currentFilters)
+          ? orangeStage
+          : null;
+      this.setHighlightSourceData(
+        SELECTED_STAGE_SOURCE_ID,
+        visibleOrangeStage ? [visibleOrangeStage] : [],
+      );
+      return;
+    }
+
+    this.setHighlightSourceData(SELECTED_GROUP_SOURCE_ID, []);
+    this.setHighlightSourceData(SELECTED_STAGE_SOURCE_ID, []);
+
     const highlightFeature =
       this.selectedFeature &&
       isFeatureVisibleUnderFilters(this.selectedFeature, this.currentFilters)
         ? this.selectedFeature
         : null;
-    source.setData({
-      type: "FeatureCollection",
-      features: highlightFeature ? featuresForHighlight(highlightFeature) : [],
-    });
+    this.setHighlightSourceData(
+      SELECTED_SOURCE_ID,
+      highlightFeature ? [highlightFeature] : [],
+    );
   }
 }

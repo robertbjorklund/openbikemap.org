@@ -8,6 +8,8 @@ import {
 
   type MtbScaleFilter,
 
+  type MtbImbaScaleFilter,
+
 } from "../types/BikeActivity";
 
 import type { RouteNetworkFilter } from "../types/RouteNetwork";
@@ -54,6 +56,8 @@ export default interface EventBus {
 
   openCredits(): void;
 
+  openCookiePolicy(): void;
+
   openAboutInfo(): void;
 
   closeAboutInfo(): void;
@@ -66,9 +70,15 @@ export default interface EventBus {
 
   toggleMtbScale(scale: MtbScaleFilter): void;
 
+  toggleMtbImbaScale(scale: MtbImbaScaleFilter): void;
+
   toggleRouteNetwork(network: RouteNetworkFilter): void;
 
   showInfo(id: string, options?: ShowInfoOptions): void;
+
+  selectRouteStage(stageId: string): void;
+
+  showRouteGroupOverview(): void;
 
   hideInfo(): void;
 

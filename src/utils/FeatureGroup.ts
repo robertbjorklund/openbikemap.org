@@ -1,68 +1,23 @@
 import type { LineString, MultiLineString, Position } from "geojson";
 import type * as maplibregl from "maplibre-gl";
 import { mapFeatureFromMvt } from "../components/MvtFeature";
+import { FeatureType, type MapFeature } from "../types/FeatureTypes";
 import {
-  FeatureType,
-  TRAIL_CATEGORY_LABELS,
-  type MapFeature,
-  type RouteProperties,
-  type TrailCategory,
-} from "../types/FeatureTypes";
+  getFeatureGroupKey,
+  matchesGroupKey,
+} from "../types/FeatureGroupKeys";
 
-const GENERIC_TRAIL_NAMES = new Set(Object.values(TRAIL_CATEGORY_LABELS));
-
-export interface FeatureGroupKey {
-  name: string;
-  category?: TrailCategory;
-  /** Route groups match by name and/or ref, not network. */
-  routeGroupKey?: RouteGroupKey;
-}
-
-export interface RouteGroupKey {
-  nameKey: string | null;
-  refKey: string | null;
-}
-
-/** Strip trailing parenthetical suffix, e.g. "Kustlinjen (29)" → "kustlinjen". */
-export function normalizeRouteName(name: string): string {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/\s*\([^)]*\)\s*$/, "")
-    .trim();
-}
-
-function normalizeRouteRef(ref: string): string {
-  return normalizeRouteName(ref) || ref.trim();
-}
-
-export function getRouteGroupKey(feature: MapFeature): RouteGroupKey | null {
-  if (feature.properties.type !== FeatureType.Route) {
-    return null;
-  }
-  const { name, ref } = feature.properties;
-  const nameKey = name ? normalizeRouteName(name) || null : null;
-  const refKey = ref ? normalizeRouteRef(ref) || null : null;
-  if (!nameKey && !refKey) {
-    return null;
-  }
-  return { nameKey, refKey };
-}
-
-export function matchesRouteGroupKey(
-  properties: RouteProperties,
-  key: RouteGroupKey,
-): boolean {
-  const name = properties.name ? normalizeRouteName(properties.name) || null : null;
-  const ref = properties.ref ? normalizeRouteRef(properties.ref) || null : null;
-  if (key.nameKey && name === key.nameKey) {
-    return true;
-  }
-  if (key.refKey && ref === key.refKey) {
-    return true;
-  }
-  return false;
-}
+export type { FeatureGroupKey, RouteGroupKey, TrailGroupKey } from "../types/FeatureGroupKeys";
+export {
+  getFeatureGroupKey,
+  getRouteGroupKey,
+  getTrailGroupKey,
+  matchesGroupKey,
+  matchesRouteGroupKey,
+  matchesTrailGroupKey,
+  normalizeRouteName,
+  normalizeTrailName,
+} from "../types/FeatureGroupKeys";
 
 function getLineStrings(
   geometry: LineString | MultiLineString,
@@ -71,71 +26,6 @@ function getLineStrings(
     return geometry.coordinates.length >= 2 ? [geometry.coordinates] : [];
   }
   return geometry.coordinates.filter((line) => line.length >= 2);
-}
-
-export function getFeatureGroupKey(feature: MapFeature): FeatureGroupKey | null {
-  const { properties } = feature;
-
-  if (
-    properties.type === FeatureType.Trail &&
-    properties.name &&
-    !GENERIC_TRAIL_NAMES.has(properties.name)
-  ) {
-    return { name: properties.name, category: properties.category };
-  }
-
-  if (properties.type === FeatureType.Route) {
-    const routeKey = getRouteGroupKey(feature);
-    if (!routeKey) {
-      return null;
-    }
-    return {
-      name: routeKey.nameKey ?? routeKey.refKey ?? "",
-      routeGroupKey: routeKey,
-    };
-  }
-
-  return null;
-}
-
-export function matchesGroupKey(
-  feature: MapFeature,
-  key: FeatureGroupKey,
-): boolean {
-  const { properties } = feature;
-
-  if (properties.type === FeatureType.Trail) {
-    return (
-      properties.name === key.name &&
-      (!key.category || properties.category === key.category)
-    );
-  }
-
-  if (properties.type === FeatureType.Route && key.routeGroupKey) {
-    return matchesRouteGroupKey(properties, key.routeGroupKey);
-  }
-
-  return false;
-}
-
-function mergeFeatureGeometries(
-  primary: MapFeature,
-  parts: MapFeature[],
-): MapFeature {
-  const lines = parts.flatMap((part) => getLineStrings(part.geometry));
-  if (lines.length === 0) {
-    return primary;
-  }
-  if (lines.length === 1) {
-    return {
-      ...primary,
-      geometry: { type: "LineString", coordinates: lines[0] },
-    };
-  }
-  return {
-    ...primary,
-    geometry: { type: "MultiLineString", coordinates: lines },
-  };
 }
 
 /** Merge vector-tile clips that share the same feature id (one clip per tile). */
@@ -159,6 +49,26 @@ export function mergeTileClips(features: MapFeature[]): MapFeature[] {
     }
     return mergeSegmentGroup(group[0], group);
   });
+}
+
+function mergeFeatureGeometries(
+  primary: MapFeature,
+  parts: MapFeature[],
+): MapFeature {
+  const lines = parts.flatMap((part) => getLineStrings(part.geometry));
+  if (lines.length === 0) {
+    return primary;
+  }
+  if (lines.length === 1) {
+    return {
+      ...primary,
+      geometry: { type: "LineString", coordinates: lines[0] },
+    };
+  }
+  return {
+    ...primary,
+    geometry: { type: "MultiLineString", coordinates: lines },
+  };
 }
 
 export function findRelatedFeatures(
@@ -188,6 +98,10 @@ export function findRelatedFeatures(
       continue;
     }
     if (feature.properties.id === primaryId) {
+      matches.push(feature);
+      continue;
+    }
+    if (groupKey?.groupId && feature.properties.groupId === groupKey.groupId) {
       matches.push(feature);
       continue;
     }

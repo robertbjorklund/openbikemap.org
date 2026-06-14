@@ -2,7 +2,7 @@ import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import { Box } from "@mui/material";
 import * as React from "react";
-import { FeatureType, type MapFeature } from "../types/FeatureTypes";
+import type { MapFeature } from "../types/FeatureTypes";
 import {
   canExportFeatureGpx,
   downloadFeatureGpx,
@@ -21,10 +21,10 @@ export const InfoPanelActions: React.FunctionComponent<{
 }> = (props) => {
   const { feature } = props;
   const canDownload = canExportFeatureGpx(feature);
-  const isRoute = feature.properties.type === FeatureType.Route;
-  const osmEditUrl = isRoute
-    ? osmEditUrlForFeature(feature.properties.sources, feature.geometry)
-    : null;
+  const osmEditUrl = osmEditUrlForFeature(
+    feature.properties.sources,
+    feature.geometry,
+  );
 
   return (
     <Box

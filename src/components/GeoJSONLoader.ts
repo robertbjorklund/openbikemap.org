@@ -29,3 +29,13 @@ export async function loadGeoJSON<T>(
   }
   return response.json() as Promise<T>;
 }
+
+export async function loadFeatureGroup(groupId: string): Promise<MapFeature[]> {
+  const url = `${API_BASE_URL}/features/groups/${encodeURIComponent(groupId)}.geojson`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to load feature group ${groupId}`);
+  }
+  const collection = (await response.json()) as GeoJSON.FeatureCollection;
+  return collection.features as MapFeature[];
+}

@@ -3,22 +3,25 @@ import { MapMarker } from "../MapMarker";
 import { MapStyle } from "../MapStyle";
 import {
   BikeActivity,
+  IMBA_SCALE_FILTERS,
   MTB_SCALE_FILTERS,
+  type MtbImbaScaleFilter,
   type MtbScaleFilter,
 } from "../types/BikeActivity";
 import {
   ROUTE_NETWORK_FILTERS,
   type RouteNetworkFilter,
 } from "../types/RouteNetwork";
-import { FeatureType, type MapFeature } from "../types/FeatureTypes";
+import { type MapFeature } from "../types/FeatureTypes";
+import { mergeSegmentGroup } from "../utils/FeatureGroup";
+import { resolveFeatureGroup } from "../utils/resolveFeatureGroup";
 import {
-  getRouteGroupKey,
-  matchesRouteGroupKey,
-  mergeSegmentGroup,
-} from "../utils/FeatureGroup";
+  buildRouteGroupSelection,
+  findRouteStageFeature,
+} from "../utils/routeGroupSelection";
 import EventBus, { type ShowInfoOptions } from "./EventBus";
 import { isFeatureVisibleUnderFilters } from "./MapFilterRules";
-import { loadGeoJSON, searchFeatures } from "./GeoJSONLoader";
+import { loadGeoJSON } from "./GeoJSONLoader";
 import type { ObjectIDType } from "./SelectedObject";
 import type { SidePanelView } from "./SidePanelView";
 import State, { StateChanges } from "./State";
@@ -82,6 +85,10 @@ export default class StateReducer implements EventBus {
     this.toggleSidePanel("credits");
   };
 
+  openCookiePolicy = () => {
+    this.toggleSidePanel("cookiePolicy");
+  };
+
   closeSidebar = () => {
     this.closeMenu();
   };
@@ -130,6 +137,9 @@ export default class StateReducer implements EventBus {
       mapFilters.hiddenMtbScales = enabling
         ? []
         : [...MTB_SCALE_FILTERS];
+      mapFilters.hiddenMtbImbaScales = enabling
+        ? []
+        : [...IMBA_SCALE_FILTERS];
     }
 
     if (activity === BikeActivity.Routes) {
@@ -147,9 +157,11 @@ export default class StateReducer implements EventBus {
       ? hidden.filter((s) => s !== scale)
       : [...hidden, scale];
 
-    const allScalesHidden = MTB_SCALE_FILTERS.every((value) =>
-      hiddenMtbScales.includes(value),
-    );
+    const allScalesHidden =
+      MTB_SCALE_FILTERS.every((value) => hiddenMtbScales.includes(value)) &&
+      IMBA_SCALE_FILTERS.every((value) =>
+        this._state.mapFilters.hiddenMtbImbaScales.includes(value),
+      );
     const hiddenActivities = allScalesHidden
       ? [...new Set([...this._state.mapFilters.hiddenActivities, BikeActivity.Mtb])]
       : this._state.mapFilters.hiddenActivities.filter(
@@ -160,6 +172,32 @@ export default class StateReducer implements EventBus {
       mapFilters: {
         ...this._state.mapFilters,
         hiddenMtbScales,
+        hiddenActivities,
+      },
+    });
+  };
+
+  toggleMtbImbaScale = (scale: MtbImbaScaleFilter) => {
+    const hidden = this._state.mapFilters.hiddenMtbImbaScales;
+    const hiddenMtbImbaScales = hidden.includes(scale)
+      ? hidden.filter((s) => s !== scale)
+      : [...hidden, scale];
+
+    const allScalesHidden =
+      MTB_SCALE_FILTERS.every((value) =>
+        this._state.mapFilters.hiddenMtbScales.includes(value),
+      ) &&
+      IMBA_SCALE_FILTERS.every((value) => hiddenMtbImbaScales.includes(value));
+    const hiddenActivities = allScalesHidden
+      ? [...new Set([...this._state.mapFilters.hiddenActivities, BikeActivity.Mtb])]
+      : this._state.mapFilters.hiddenActivities.filter(
+          (activity) => activity !== BikeActivity.Mtb,
+        );
+
+    this.update({
+      mapFilters: {
+        ...this._state.mapFilters,
+        hiddenMtbImbaScales,
         hiddenActivities,
       },
     });
@@ -194,46 +232,6 @@ export default class StateReducer implements EventBus {
     });
   };
 
-  private resolveRelatedRouteFeatures = async (
-    primaryFeature: MapFeature,
-    relatedFeatures: MapFeature[],
-  ): Promise<MapFeature[]> => {
-    if (primaryFeature.properties.type !== FeatureType.Route) {
-      return relatedFeatures;
-    }
-
-    const routeKey = getRouteGroupKey(primaryFeature);
-    if (!routeKey) {
-      return relatedFeatures;
-    }
-
-    const query =
-      primaryFeature.properties.name?.trim() ||
-      primaryFeature.properties.ref?.trim();
-    if (!query) {
-      return relatedFeatures;
-    }
-
-    try {
-      const searchHits = await searchFeatures(query, 100);
-      const byId = new Map(
-        relatedFeatures.map((feature) => [feature.properties.id, feature]),
-      );
-      for (const hit of searchHits) {
-        if (
-          hit.properties.type === FeatureType.Route &&
-          matchesRouteGroupKey(hit.properties, routeKey) &&
-          !byId.has(hit.properties.id)
-        ) {
-          byId.set(hit.properties.id, hit);
-        }
-      }
-      return [...byId.values()];
-    } catch {
-      return relatedFeatures;
-    }
-  };
-
   private loadFullRelatedFeatures = async (
     primaryId: string,
     idType: ObjectIDType,
@@ -241,9 +239,6 @@ export default class StateReducer implements EventBus {
     primaryFeature: MapFeature,
   ): Promise<MapFeature[]> => {
     const uniqueIds = [...new Set(relatedFeatures.map((f) => f.properties.id))];
-    if (uniqueIds.length <= 1) {
-      return [primaryFeature];
-    }
 
     return Promise.all(
       uniqueIds.map(async (segmentId) => {
@@ -277,7 +272,7 @@ export default class StateReducer implements EventBus {
         return;
       }
 
-      const expandedRelated = await this.resolveRelatedRouteFeatures(
+      const expandedRelated = await resolveFeatureGroup(
         apiFeature,
         relatedFeatures,
       );
@@ -292,6 +287,7 @@ export default class StateReducer implements EventBus {
         selectedObject: {
           ...this._state.selectedObject,
           feature: buildDisplayFeature(apiFeature, fullRelated),
+          routeGroup: buildRouteGroupSelection(apiFeature, fullRelated),
         },
       });
     } catch (error) {
@@ -304,6 +300,10 @@ export default class StateReducer implements EventBus {
           selectedObject: {
             ...this._state.selectedObject,
             feature: buildDisplayFeature(fallbackFeature, relatedFeatures),
+            routeGroup: buildRouteGroupSelection(
+              fallbackFeature,
+              relatedFeatures,
+            ),
           },
         });
         return;
@@ -336,6 +336,46 @@ export default class StateReducer implements EventBus {
     });
 
     this.loadInfoData(id, idType, relatedFeatures, clickedFeature);
+  };
+
+  selectRouteStage = (stageId: string) => {
+    const routeGroup = this._state.selectedObject?.routeGroup;
+    if (!routeGroup) {
+      return;
+    }
+    const stage = findRouteStageFeature(routeGroup, stageId);
+    if (!stage) {
+      return;
+    }
+    this.update({
+      selectedObject: {
+        ...this._state.selectedObject!,
+        id: stage.properties.id,
+        feature: stage,
+        routeGroup: {
+          ...routeGroup,
+          activeStageId: stageId,
+        },
+      },
+    });
+  };
+
+  showRouteGroupOverview = () => {
+    const routeGroup = this._state.selectedObject?.routeGroup;
+    if (!routeGroup || !routeGroup.activeStageId) {
+      return;
+    }
+    this.update({
+      selectedObject: {
+        ...this._state.selectedObject!,
+        id: routeGroup.wholeRouteFeature.properties.id,
+        feature: routeGroup.wholeRouteFeature,
+        routeGroup: {
+          ...routeGroup,
+          activeStageId: null,
+        },
+      },
+    });
   };
 
   hideInfo = () => {
@@ -419,7 +459,7 @@ export default class StateReducer implements EventBus {
       const change = (changes as Record<string, unknown>)[key];
       if (state[key] !== change) {
         state[key] = change;
-      } else {
+      } else if (key !== "mapFilters") {
         delete (changes as Record<string, unknown>)[key];
       }
     });

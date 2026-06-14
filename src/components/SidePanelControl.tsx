@@ -10,6 +10,8 @@ import type { MapFeature } from "../types/FeatureTypes";
 
 import { AboutPanel } from "./AboutPanel";
 
+import { CookiePolicyPanel } from "./CookiePolicyPanel";
+
 import { CreditsPanel } from "./CreditsPanel";
 
 import EventBus from "./EventBus";
@@ -26,6 +28,8 @@ import { SidePanelFrame } from "./SidePanelFrame";
 
 import type { SidePanelView } from "./SidePanelView";
 
+import type { RouteGroupSelection } from "./SelectedObject";
+
 import { Themed } from "./Themed";
 
 
@@ -35,8 +39,14 @@ export const SIDE_PANEL_RAIL_WIDTH = 80;
 /** Fly-out panel content width; total open width includes the rail. */
 export const SIDE_PANEL_CONTENT_WIDTH = 400;
 
+/** Wider content area for the two-column filter panel. */
+export const SIDE_PANEL_FILTER_CONTENT_WIDTH = 680;
+
 export const SIDE_PANEL_WIDTH =
   SIDE_PANEL_RAIL_WIDTH + SIDE_PANEL_CONTENT_WIDTH;
+
+export const SIDE_PANEL_FILTER_WIDTH =
+  SIDE_PANEL_RAIL_WIDTH + SIDE_PANEL_FILTER_CONTENT_WIDTH;
 
 
 
@@ -59,6 +69,8 @@ export class SidePanelControl implements maplibregl.IControl {
   private mapFilters: MapFilters;
 
   private infoFeature: MapFeature | null = null;
+
+  private routeGroup: RouteGroupSelection | null = null;
 
 
 
@@ -150,6 +162,8 @@ export class SidePanelControl implements maplibregl.IControl {
 
       infoFeature?: MapFeature | null;
 
+      routeGroup?: RouteGroupSelection | null;
+
     },
 
   ) => {
@@ -171,6 +185,12 @@ export class SidePanelControl implements maplibregl.IControl {
     if (options?.infoFeature !== undefined) {
       if (options.infoFeature !== null || view !== "route") {
         this.infoFeature = options.infoFeature;
+      }
+    }
+
+    if (options?.routeGroup !== undefined) {
+      if (options.routeGroup !== null || view !== "route") {
+        this.routeGroup = options.routeGroup;
       }
     }
 
@@ -203,16 +223,27 @@ export class SidePanelControl implements maplibregl.IControl {
   };
 
   /** Reserve rail width only; expanded panel content overlays the map. */
-  private initRailLayout = () => {
+  private updatePanelWidth = () => {
     const container = this.map?.getContainer();
-    container?.style.setProperty(
+    if (!container) {
+      return;
+    }
+    container.style.setProperty(
       "--side-panel-rail-width",
       `${SIDE_PANEL_RAIL_WIDTH}px`,
     );
-    container?.style.setProperty(
+    const contentWidth =
+      this.view === "filter"
+        ? SIDE_PANEL_FILTER_CONTENT_WIDTH
+        : SIDE_PANEL_CONTENT_WIDTH;
+    container.style.setProperty(
       "--side-panel-width",
-      `${SIDE_PANEL_WIDTH}px`,
+      `${SIDE_PANEL_RAIL_WIDTH + contentWidth}px`,
     );
+  };
+
+  private initRailLayout = () => {
+    this.updatePanelWidth();
   };
 
 
@@ -225,7 +256,7 @@ export class SidePanelControl implements maplibregl.IControl {
 
     }
 
-
+    this.updatePanelWidth();
 
     const open = this.view !== null;
 
@@ -267,10 +298,15 @@ export class SidePanelControl implements maplibregl.IControl {
 
       content = <AboutPanel eventBus={this.eventBus} />;
 
+    } else if (this.view === "cookiePolicy") {
+
+      content = <CookiePolicyPanel eventBus={this.eventBus} />;
+
     } else if (this.view === "route") {
       content = (
         <RoutePanel
           feature={this.infoFeature}
+          routeGroup={this.routeGroup ?? undefined}
           eventBus={this.eventBus}
           map={this.map ?? undefined}
         />

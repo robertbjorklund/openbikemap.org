@@ -3,11 +3,13 @@ import type * as maplibregl from "maplibre-gl";
 import * as React from "react";
 import type { MapFeature } from "../types/FeatureTypes";
 import EventBus from "./EventBus";
+import type { RouteGroupSelection } from "./SelectedObject";
 import { InfoPanel } from "./InfoPanel";
 import { PanelShell } from "./PanelShell";
 
 export const RoutePanel: React.FunctionComponent<{
   feature: MapFeature | null;
+  routeGroup?: RouteGroupSelection;
   eventBus: EventBus;
   map?: maplibregl.Map;
 }> = (props) => {
@@ -28,6 +30,7 @@ export const RoutePanel: React.FunctionComponent<{
   return (
     <InfoPanel
       feature={props.feature}
+      routeGroup={props.routeGroup}
       eventBus={props.eventBus}
       map={props.map}
     />

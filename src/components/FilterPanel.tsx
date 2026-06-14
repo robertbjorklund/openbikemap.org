@@ -22,6 +22,10 @@ import {
 
   BikeActivity,
 
+  IMBA_SCALE_FILTER_LABELS,
+
+  IMBA_SCALE_FILTERS,
+
   MTB_SCALE_FILTER_LABELS,
 
   MTB_SCALE_FILTERS,
@@ -43,6 +47,7 @@ import {
 import EventBus from "./EventBus";
 
 import { MtbScaleLegendIcon } from "./MtbScaleLegendIcon";
+import { MtbImbaLegendIcon } from "./MtbImbaLegendIcon";
 import { RouteNetworkLegendIcon } from "./RouteNetworkLegendIcon";
 
 import { PanelShell } from "./PanelShell";
@@ -103,27 +108,49 @@ export const FilterPanel: React.FunctionComponent<{
 
     >
 
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <Box
 
-        <strong>MTB</strong> shows off-road trails by difficulty (S0–S6).{" "}
+        sx={{
 
-        <strong>Bicycle routes</strong> are signed long-distance cycling routes
+          display: "grid",
 
-        (asphalt and gravel). Urban cycle paths and footways are not included.
+          gridTemplateColumns: "1fr 1fr",
 
-      </Typography>
+          gap: 3,
 
+          alignItems: "start",
 
+        }}
 
-      <Typography variant="subtitle1" sx={{ mb: 1 }}>
+      >
 
-        Activities
+        <Box
 
-      </Typography>
+          sx={{
 
-      <FormGroup sx={{ pl: 1 }}>
+            pr: 2,
 
-        <Box>
+            borderRight: 1,
+
+            borderColor: "divider",
+
+            minWidth: 0,
+
+          }}
+
+        >
+
+          <Typography variant="subtitle1" sx={{ mb: 0.5, fontWeight: 600 }}>
+
+            {BIKE_ACTIVITY_LABELS[BikeActivity.Mtb]}
+
+          </Typography>
+
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+
+            Off-road trails by difficulty (S0–S6 or IMBA 0–4).
+
+          </Typography>
 
           <FormControlLabel
 
@@ -139,11 +166,17 @@ export const FilterPanel: React.FunctionComponent<{
 
             }
 
-            label={BIKE_ACTIVITY_LABELS[BikeActivity.Mtb]}
+            label="Show on map"
 
           />
 
-          <FormGroup sx={{ pl: 3, pb: 0.5 }}>
+          <Typography variant="body2" sx={{ pt: 1, pb: 0.25, fontWeight: 500 }}>
+
+            STS — Single Track Scale
+
+          </Typography>
+
+          <FormGroup sx={{ pb: 0.5 }}>
 
             {MTB_SCALE_FILTERS.map((scale) => (
 
@@ -195,11 +228,79 @@ export const FilterPanel: React.FunctionComponent<{
 
           </FormGroup>
 
+          <Typography variant="body2" sx={{ pt: 0.5, pb: 0.25, fontWeight: 500 }}>
+
+            IMBA — International Mountain Bicycling Association
+
+          </Typography>
+
+          <FormGroup>
+
+            {IMBA_SCALE_FILTERS.map((scale) => (
+
+              <FormControlLabel
+
+                key={`imba-${scale}`}
+
+                sx={{ display: "flex", ml: 0 }}
+
+                control={
+
+                  <Checkbox
+
+                    size="small"
+
+                    checked={
+
+                      isMtbEnabled &&
+
+                      !props.mapFilters.hiddenMtbImbaScales.includes(scale)
+
+                    }
+
+                    onChange={() => props.eventBus.toggleMtbImbaScale(scale)}
+
+                  />
+
+                }
+
+                label={
+
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+
+                    <MtbImbaLegendIcon scale={scale} />
+
+                    <Typography variant="body2">
+
+                      {IMBA_SCALE_FILTER_LABELS[scale]}
+
+                    </Typography>
+
+                  </Box>
+
+                }
+
+              />
+
+            ))}
+
+          </FormGroup>
+
         </Box>
 
+        <Box sx={{ minWidth: 0 }}>
 
+          <Typography variant="subtitle1" sx={{ mb: 0.5, fontWeight: 600 }}>
 
-        <Box>
+            {BIKE_ACTIVITY_LABELS[BikeActivity.Routes]}
+
+          </Typography>
+
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+
+            Signed long-distance cycling routes (asphalt and gravel).
+
+          </Typography>
 
           <FormControlLabel
 
@@ -219,83 +320,79 @@ export const FilterPanel: React.FunctionComponent<{
 
             }
 
-            label={BIKE_ACTIVITY_LABELS[BikeActivity.Routes]}
+            label="Show on map"
 
           />
 
-          <Box sx={{ pl: 3, pb: 0.5 }}>
+          <Typography variant="body2" sx={{ pt: 1, mb: 0.5, fontWeight: 500 }}>
 
-            <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>
+            Route network
 
-              Route network
+          </Typography>
 
-            </Typography>
+          <FormGroup>
 
-            <FormGroup sx={{ pb: 1 }}>
+            {ROUTE_NETWORK_FILTERS.map((network) => (
 
-              {ROUTE_NETWORK_FILTERS.map((network) => (
+              <FormControlLabel
 
-                <FormControlLabel
+                key={network}
 
-                  key={network}
+                sx={{ display: "flex", ml: 0 }}
 
-                  sx={{ display: "flex", ml: 0 }}
+                control={
 
-                  control={
+                  <Checkbox
 
-                    <Checkbox
+                    size="small"
 
-                      size="small"
+                    checked={
 
-                      checked={
+                      isRoutesEnabled &&
 
-                        isRoutesEnabled &&
+                      !props.mapFilters.hiddenRouteNetworks.includes(network)
 
-                        !props.mapFilters.hiddenRouteNetworks.includes(network)
+                    }
 
-                      }
+                    onChange={() =>
 
-                      onChange={() =>
+                      props.eventBus.toggleRouteNetwork(network)
 
-                        props.eventBus.toggleRouteNetwork(network)
+                    }
 
-                      }
+                  />
+
+                }
+
+                label={
+
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+
+                    <RouteNetworkLegendIcon
+
+                      network={routeNetworkForIcon(network)}
 
                     />
 
-                  }
+                    <Typography variant="body2">
 
-                  label={
+                      {routeNetworkLabel(network)}
 
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    </Typography>
 
-                      <RouteNetworkLegendIcon
+                  </Box>
 
-                        network={routeNetworkForIcon(network)}
+                }
 
-                      />
+              />
 
-                      <Typography variant="body2">
+            ))}
 
-                        {routeNetworkLabel(network)}
-
-                      </Typography>
-
-                    </Box>
-
-                  }
-
-                />
-
-              ))}
-
-            </FormGroup>
-
-          </Box>
+          </FormGroup>
 
         </Box>
 
-      </FormGroup>
+      </Box>
 
     </PanelShell>
 

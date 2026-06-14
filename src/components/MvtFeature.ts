@@ -52,8 +52,13 @@ export function mapFeatureFromMvt(
     const properties: RouteProperties = {
       type: FeatureType.Route,
       id,
+      groupId: asString(feature.properties.groupId),
+      stageId: asString(feature.properties.stageId),
       name: asString(feature.properties.name),
       ref: asString(feature.properties.ref),
+      from: asString(feature.properties.from),
+      to: asString(feature.properties.to),
+      via: asString(feature.properties.via),
       network: asString(feature.properties.network),
       distance: null,
       roundtrip: null,
@@ -76,9 +81,11 @@ export function mapFeatureFromMvt(
     if (!category) {
       return null;
     }
+    const osmId = asString(feature.properties.osmId);
     const properties: TrailProperties = {
       type: FeatureType.Trail,
       id,
+      groupId: asString(feature.properties.groupId),
       category,
       name: asString(feature.properties.name),
       ref: asString(feature.properties.ref),
@@ -86,6 +93,7 @@ export function mapFeatureFromMvt(
       smoothness: null,
       tracktype: null,
       mtbScale: asNumber(feature.properties.mtbScale),
+      mtbScaleImba: asNumber(feature.properties.mtbScaleImba),
       sacScale: null,
       bicycle: null,
       lit: asBoolean(feature.properties.lit),
@@ -94,7 +102,9 @@ export function mapFeatureFromMvt(
       lengthMeters: asNumber(feature.properties.lengthMeters),
       elevationProfile: null,
       status: Status.Operating,
-      sources: [],
+      sources: osmId
+        ? [{ type: SourceType.OpenStreetMap, id: osmId }]
+        : [],
     };
     return {
       type: "Feature",

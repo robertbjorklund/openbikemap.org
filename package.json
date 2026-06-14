@@ -7,7 +7,7 @@
     "start": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "pull": "git pull; yarn install",
+    "pull": "git pull && node .yarn/releases/yarn-4.12.0.cjs install",
     "check-types": "tsc --noEmit"
   },
   "license": "Apache-2.0",
