@@ -52,15 +52,19 @@ export default class StateReducer implements EventBus {
   }
 
   openSidebar = () => {
-    this.openFilter();
+    this.openMtbFilter();
   };
 
   openMapLayers = () => {
     this.toggleSidePanel("mapLayers");
   };
 
-  openFilter = () => {
-    this.toggleSidePanel("filter");
+  openMtbFilter = () => {
+    this.toggleSidePanel("mtbFilter");
+  };
+
+  openRoutesFilter = () => {
+    this.toggleSidePanel("routesFilter");
   };
 
   openRoute = () => {
@@ -101,7 +105,7 @@ export default class StateReducer implements EventBus {
   };
 
   backToLayers = () => {
-    const changes: StateChanges = { sidePanelView: "filter" };
+    const changes: StateChanges = { sidePanelView: "mapLayers" };
     if (this._state.sidePanelView === "route") {
       changes.selectedObject = null;
     }

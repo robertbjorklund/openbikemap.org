@@ -15,8 +15,7 @@ export const AppConfig = {
   appDomain: "openbikemap.org",
 
   tagline:
-
-    "Find MTB trails and long-distance cycling routes for training and adventure — download GPX and ride.",
+    "Explore MTB trails and signed bicycle routes — filter by difficulty or network, download GPX, and ride.",
 
   /**
 

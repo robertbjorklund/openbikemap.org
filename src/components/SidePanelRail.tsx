@@ -1,13 +1,14 @@
-import CookieIcon from "@mui/icons-material/Cookie";
-import FilterListIcon from "@mui/icons-material/FilterList";
 import LayersIcon from "@mui/icons-material/Layers";
 import PolicyIcon from "@mui/icons-material/Policy";
 import RouteIcon from "@mui/icons-material/Route";
 import SearchIcon from "@mui/icons-material/Search";
 import SettingsIcon from "@mui/icons-material/Settings";
+import CookieIcon from "@mui/icons-material/Cookie";
 import { IconButton } from "@mui/material";
 import * as React from "react";
 import { AboutRailIcon } from "./icons/AboutRailIcon";
+import { BicycleRouteRailIcon } from "./icons/BicycleRouteRailIcon";
+import { MtbRailIcon } from "./icons/MtbRailIcon";
 import type { SidePanelNavView, SidePanelView } from "./SidePanelView";
 
 const RAIL_ICON_SX = { fontSize: 26 };
@@ -23,7 +24,8 @@ export const SidePanelRail: React.FunctionComponent<{
   onToggleSearch: () => void;
   onOpenMapLayers: () => void;
   onOpenRoute: () => void;
-  onOpenFilter: () => void;
+  onOpenMtbFilter: () => void;
+  onOpenRoutesFilter: () => void;
   onOpenSettings: () => void;
   onOpenCredits: () => void;
   onOpenAbout: () => void;
@@ -46,13 +48,23 @@ export const SidePanelRail: React.FunctionComponent<{
         </IconButton>
 
         <IconButton
-          className={railButtonClass(isActive("filter"))}
-          aria-label="Filter"
-          aria-pressed={isActive("filter")}
-          title="Filter"
-          onClick={props.onOpenFilter}
+          className={railButtonClass(isActive("mtbFilter"))}
+          aria-label="MTB filter"
+          aria-pressed={isActive("mtbFilter")}
+          title="MTB"
+          onClick={props.onOpenMtbFilter}
         >
-          <FilterListIcon sx={RAIL_ICON_SX} />
+          <MtbRailIcon />
+        </IconButton>
+
+        <IconButton
+          className={railButtonClass(isActive("routesFilter"))}
+          aria-label="Bicycle routes filter"
+          aria-pressed={isActive("routesFilter")}
+          title="Bicycle routes"
+          onClick={props.onOpenRoutesFilter}
+        >
+          <BicycleRouteRailIcon />
         </IconButton>
 
         <IconButton

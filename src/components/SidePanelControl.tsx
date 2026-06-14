@@ -16,7 +16,9 @@ import { CreditsPanel } from "./CreditsPanel";
 
 import EventBus from "./EventBus";
 
-import { FilterPanel } from "./FilterPanel";
+import { MtbFilterPanel } from "./MtbFilterPanel";
+
+import { RoutesFilterPanel } from "./RoutesFilterPanel";
 
 import { RoutePanel } from "./RoutePanel";
 
@@ -39,14 +41,8 @@ export const SIDE_PANEL_RAIL_WIDTH = 80;
 /** Fly-out panel content width; total open width includes the rail. */
 export const SIDE_PANEL_CONTENT_WIDTH = 400;
 
-/** Wider content area for the two-column filter panel. */
-export const SIDE_PANEL_FILTER_CONTENT_WIDTH = 680;
-
 export const SIDE_PANEL_WIDTH =
   SIDE_PANEL_RAIL_WIDTH + SIDE_PANEL_CONTENT_WIDTH;
-
-export const SIDE_PANEL_FILTER_WIDTH =
-  SIDE_PANEL_RAIL_WIDTH + SIDE_PANEL_FILTER_CONTENT_WIDTH;
 
 
 
@@ -232,10 +228,7 @@ export class SidePanelControl implements maplibregl.IControl {
       "--side-panel-rail-width",
       `${SIDE_PANEL_RAIL_WIDTH}px`,
     );
-    const contentWidth =
-      this.view === "filter"
-        ? SIDE_PANEL_FILTER_CONTENT_WIDTH
-        : SIDE_PANEL_CONTENT_WIDTH;
+    const contentWidth = SIDE_PANEL_CONTENT_WIDTH;
     container.style.setProperty(
       "--side-panel-width",
       `${SIDE_PANEL_RAIL_WIDTH + contentWidth}px`,
@@ -278,12 +271,16 @@ export class SidePanelControl implements maplibregl.IControl {
 
       );
 
-    } else if (this.view === "filter") {
-
+    } else if (this.view === "mtbFilter") {
       content = (
-
-        <FilterPanel eventBus={this.eventBus} mapFilters={this.mapFilters} />
-
+        <MtbFilterPanel eventBus={this.eventBus} mapFilters={this.mapFilters} />
+      );
+    } else if (this.view === "routesFilter") {
+      content = (
+        <RoutesFilterPanel
+          eventBus={this.eventBus}
+          mapFilters={this.mapFilters}
+        />
       );
 
     } else if (this.view === "settings") {

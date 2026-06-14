@@ -46,7 +46,9 @@ export default interface EventBus {
 
   openMapLayers(): void;
 
-  openFilter(): void;
+  openMtbFilter(): void;
+
+  openRoutesFilter(): void;
 
   openRoute(): void;
 

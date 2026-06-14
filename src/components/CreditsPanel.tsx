@@ -13,17 +13,20 @@ export const CreditsPanel: React.FunctionComponent<{
       onClose={() => props.eventBus.closeMenu()}
     >
       <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
-        Map data
+        MTB and bicycle routes
       </Typography>
       <Typography paragraph sx={{ mb: 2 }}>
-        <Link href="https://www.openstreetmap.org/copyright" target="_blank">
+        Trail and route overlays are derived from{" "}
+        <Link
+          href="https://www.openstreetmap.org/copyright"
+          target="_blank"
+          rel="noreferrer"
+        >
           © OpenStreetMap contributors
-        </Link>{" "}
-        and{" "}
-        <Link href={`https://${AppConfig.appDomain}/?about`}>
-          {AppConfig.appName}
         </Link>
-        .
+        , processed for {AppConfig.appName}, and served as vector tiles and
+        GeoJSON. MTB difficulty follows OSM Single Track Scale (S0–S6) and IMBA
+        scale (0–4) tags where mappers have added them.
       </Typography>
 
       <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
@@ -31,11 +34,15 @@ export const CreditsPanel: React.FunctionComponent<{
       </Typography>
       <Typography paragraph sx={{ mb: 2 }}>
         Graciously provided by{" "}
-        <Link href="https://openfreemap.org/" target="_blank">
+        <Link href="https://openfreemap.org/" target="_blank" rel="noreferrer">
           OpenFreeMap
         </Link>{" "}
         and{" "}
-        <Link href="https://www.openmaptiles.org/" target="_blank">
+        <Link
+          href="https://www.openmaptiles.org/"
+          target="_blank"
+          rel="noreferrer"
+        >
           © OpenMapTiles
         </Link>
         .
@@ -44,20 +51,12 @@ export const CreditsPanel: React.FunctionComponent<{
       <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
         Satellite imagery
       </Typography>
-      <Typography paragraph sx={{ mb: 2 }}>
+      <Typography paragraph>
         Powered by{" "}
-        <Link href="https://www.esri.com/" target="_blank">
+        <Link href="https://www.esri.com/" target="_blank" rel="noreferrer">
           Esri
         </Link>
         .
-      </Typography>
-
-      <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
-        Bicycle data
-      </Typography>
-      <Typography paragraph>
-        Trail and route data is derived from OpenStreetMap and processed for{" "}
-        {AppConfig.appName}.
       </Typography>
     </PanelShell>
   );

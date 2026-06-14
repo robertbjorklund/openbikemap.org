@@ -9,11 +9,7 @@ export enum FeatureType {
 }
 
 export enum TrailCategory {
-  Cycleway = "cycleway",
-  BicycleRoute = "bicycle_route",
   MtbTrail = "mtb_trail",
-  GravelTrack = "gravel_track",
-  SharedPath = "shared_path",
 }
 
 export enum Status {
@@ -99,9 +95,5 @@ export type RouteFeature = Feature<
 export type MapFeature = TrailFeature | RouteFeature;
 
 export const TRAIL_CATEGORY_LABELS: Record<TrailCategory, string> = {
-  [TrailCategory.Cycleway]: "Cycleway",
-  [TrailCategory.BicycleRoute]: "Bicycle route",
   [TrailCategory.MtbTrail]: "MTB trail",
-  [TrailCategory.GravelTrack]: "Gravel / forest track",
-  [TrailCategory.SharedPath]: "Shared path",
 };
