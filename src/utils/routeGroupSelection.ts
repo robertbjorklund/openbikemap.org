@@ -3,6 +3,7 @@ import {
   type MapFeature,
   type RouteFeature,
 } from "../types/FeatureTypes";
+import { routeLinkKeysIntersect } from "./RouteDisplayName";
 import { mergeSegmentGroup } from "./FeatureGroup";
 import type { RouteGroupSelection } from "../components/SelectedObject";
 
@@ -15,15 +16,13 @@ export function buildRouteGroupSelection(
   }
 
   const groupId = primary.properties.groupId;
-  if (!groupId) {
-    return undefined;
-  }
+  const primaryRoute = primary.properties;
 
   const stageFeatures = relatedFeatures.filter(
     (feature): feature is RouteFeature =>
       feature.properties.type === FeatureType.Route &&
-      feature.properties.groupId === groupId &&
-      !!feature.properties.stageId,
+      !!feature.properties.stageId &&
+      routeLinkKeysIntersect(primaryRoute, feature.properties),
   );
 
   const uniqueStageIds = new Set(
@@ -34,7 +33,7 @@ export function buildRouteGroupSelection(
   }
 
   return {
-    groupId,
+    groupId: groupId ?? primary.properties.id,
     stageFeatures,
     wholeRouteFeature: mergeSegmentGroup(primary, stageFeatures) as RouteFeature,
     activeStageId: null,

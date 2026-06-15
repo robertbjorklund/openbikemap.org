@@ -23,8 +23,10 @@ import {
 } from "./MapPaintRules";
 import { MapInteractionManager } from "./MapInteractionManager";
 import { EsriAttribution } from "./EsriAttribution";
+import { FilterControl } from "./FilterControl";
 import { LogoControl } from "./LogoControl";
-import { LayersControl } from "./LayersControl";
+import { MapNavigationControl } from "./MapNavigationControl";
+import { StyledGeolocateControl } from "./StyledGeolocateControl";
 import { registerSatelliteTileProtocol } from "./SatelliteTileProtocol";
 import { SelectedObject, type RouteGroupSelection } from "./SelectedObject";
 import { SidePanelControl } from "./SidePanelControl";
@@ -32,11 +34,87 @@ import State from "./State";
 import { addUnitSystemChangeListener_NonReactive, getUnitSystem } from "./UnitSystemManager";
 
 const SELECTED_SOURCE_ID = "openbikemap-selected";
-const SELECTED_LAYER_ID = "openbikemap-selected-line";
+const SELECTED_GLOW_LAYER_ID = "openbikemap-selected-line-glow";
 const SELECTED_GROUP_SOURCE_ID = "openbikemap-selected-group";
-const SELECTED_GROUP_LAYER_ID = "openbikemap-selected-group-line";
+const SELECTED_GROUP_GLOW_LAYER_ID = "openbikemap-selected-group-line-glow";
 const SELECTED_STAGE_SOURCE_ID = "openbikemap-selected-stage";
-const SELECTED_STAGE_LAYER_ID = "openbikemap-selected-stage-line";
+const SELECTED_STAGE_GLOW_LAYER_ID = "openbikemap-selected-stage-line-glow";
+
+/** Legacy top overlay layers — removed when present. */
+const LEGACY_ROUTE_HIGHLIGHT_LAYER_IDS = [
+  "openbikemap-selected-line",
+  "openbikemap-selected-group-line",
+  "openbikemap-selected-stage-line",
+] as const;
+
+const ROUTE_LAYER_STACK = [
+  "routes-casing",
+  "routes",
+  "routes-label-stripe",
+  "routes-label",
+  "tappable-route",
+] as const;
+
+const ROUTE_HIGHLIGHT_GLOW_LAYER_IDS = [
+  SELECTED_GROUP_GLOW_LAYER_ID,
+  SELECTED_GLOW_LAYER_ID,
+  SELECTED_STAGE_GLOW_LAYER_ID,
+] as const;
+
+interface RouteHighlightGlow {
+  color: string;
+  opacity: number;
+  width: maplibregl.ExpressionSpecification;
+  blur: number;
+}
+
+const ROUTE_HIGHLIGHT_GLOW_WIDTH: maplibregl.ExpressionSpecification = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  8,
+  4,
+  11,
+  7,
+  14,
+  14,
+  16,
+  16,
+  18,
+  16,
+];
+
+const ROUTE_HIGHLIGHT_YELLOW_GLOW_WIDTH: maplibregl.ExpressionSpecification = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  8,
+  5,
+  11,
+  8,
+  14,
+  16,
+  16,
+  18,
+  18,
+  18,
+];
+
+const ROUTE_HIGHLIGHT_GLOW_BLUR = 1.5;
+
+const ROUTE_HIGHLIGHT_YELLOW_GLOW: RouteHighlightGlow = {
+  color: "#ffeb3b",
+  opacity: 0.82,
+  width: ROUTE_HIGHLIGHT_YELLOW_GLOW_WIDTH,
+  blur: ROUTE_HIGHLIGHT_GLOW_BLUR,
+};
+
+const ROUTE_HIGHLIGHT_ORANGE_GLOW: RouteHighlightGlow = {
+  color: "#ff9800",
+  opacity: 0.78,
+  width: ROUTE_HIGHLIGHT_GLOW_WIDTH,
+  blur: ROUTE_HIGHLIGHT_GLOW_BLUR,
+};
 
 export class Map {
   private map: maplibregl.Map;
@@ -45,7 +123,7 @@ export class Map {
   private currentFilters: MapFilters = defaultMapFilters;
   private cameraPositionManager: CameraPositionManager;
   private sidePanelControl: SidePanelControl;
-  private layersControl: LayersControl;
+  private filterControl: FilterControl;
   private attributionControl: maplibregl.AttributionControl;
   private mapScaleControl: maplibregl.ScaleControl;
   private selectedFeature: MapFeature | null = null;
@@ -92,9 +170,12 @@ export class Map {
       MapStyle.Terrain,
     );
     this.map.addControl(this.sidePanelControl);
-    this.map.addControl(new maplibregl.NavigationControl(), "top-right");
+
     this.mapScaleControl = new maplibregl.ScaleControl({ maxWidth: 80 });
     this.map.addControl(this.mapScaleControl, "bottom-left");
+
+    this.filterControl = new FilterControl(eventBus, MapStyle.Terrain);
+    this.map.addControl(this.filterControl, "bottom-left");
 
     addUnitSystemChangeListener_NonReactive({
       onUnitSystemChange: (unitSystem) => {
@@ -115,14 +196,12 @@ export class Map {
       this.map.addControl(new LogoControl(), "bottom-right");
     }
 
-    const geolocateControl = new maplibregl.GeolocateControl({
+    const geolocateControl = new StyledGeolocateControl({
       positionOptions: { enableHighAccuracy: true },
       trackUserLocation: true,
     });
     this.map.addControl(geolocateControl, "bottom-right");
-
-    this.layersControl = new LayersControl(eventBus);
-    this.map.addControl(this.layersControl, "bottom-right");
+    this.map.addControl(new MapNavigationControl(), "bottom-right");
 
     navigator.permissions?.query({ name: "geolocation" }).then((result) => {
       if (result.state === "denied") {
@@ -222,7 +301,7 @@ export class Map {
   setFilters = this.setFiltersUnthrottled;
 
   updateSidePanel(state: State): void {
-    this.layersControl.setStyle(state.mapStyle);
+    this.filterControl.setMapStyle(state.mapStyle);
     const viewOptions: {
       mapFilters: MapFilters;
       mapStyle: MapStyle;
@@ -348,37 +427,61 @@ export class Map {
   }
 
   private ensureSelectedHighlightLayer(): void {
-    this.ensureHighlightSourceAndLayer(
+    this.removeLegacyRouteHighlightLayers();
+
+    this.ensureHighlightSourceAndGlowLayer(
       SELECTED_SOURCE_ID,
-      SELECTED_LAYER_ID,
-      { color: "#fdd835", width: 10 },
+      SELECTED_GLOW_LAYER_ID,
+      ROUTE_HIGHLIGHT_YELLOW_GLOW,
     );
-    this.ensureHighlightSourceAndLayer(
+    this.ensureHighlightSourceAndGlowLayer(
       SELECTED_GROUP_SOURCE_ID,
-      SELECTED_GROUP_LAYER_ID,
-      { color: "#fdd835", width: 8 },
+      SELECTED_GROUP_GLOW_LAYER_ID,
+      ROUTE_HIGHLIGHT_YELLOW_GLOW,
     );
-    this.ensureHighlightSourceAndLayer(
+    this.ensureHighlightSourceAndGlowLayer(
       SELECTED_STAGE_SOURCE_ID,
-      SELECTED_STAGE_LAYER_ID,
-      { color: "#ff9800", width: 14 },
+      SELECTED_STAGE_GLOW_LAYER_ID,
+      ROUTE_HIGHLIGHT_ORANGE_GLOW,
     );
 
-    for (const layerId of [
-      SELECTED_LAYER_ID,
-      SELECTED_GROUP_LAYER_ID,
-      SELECTED_STAGE_LAYER_ID,
-    ]) {
+    this.repositionHighlightGlowBelowRoutes();
+  }
+
+  private removeLegacyRouteHighlightLayers(): void {
+    for (const layerId of LEGACY_ROUTE_HIGHLIGHT_LAYER_IDS) {
       if (this.map.getLayer(layerId)) {
-        this.map.moveLayer(layerId);
+        this.map.removeLayer(layerId);
       }
     }
   }
 
-  private ensureHighlightSourceAndLayer(
+  private getRouteHighlightBeforeLayerId(): string | undefined {
+    for (const layerId of ROUTE_LAYER_STACK) {
+      if (this.map.getLayer(layerId)) {
+        return layerId;
+      }
+    }
+    return undefined;
+  }
+
+  private repositionHighlightGlowBelowRoutes(): void {
+    const beforeId = this.getRouteHighlightBeforeLayerId();
+    if (!beforeId) {
+      return;
+    }
+
+    for (const layerId of ROUTE_HIGHLIGHT_GLOW_LAYER_IDS) {
+      if (this.map.getLayer(layerId)) {
+        this.map.moveLayer(layerId, beforeId);
+      }
+    }
+  }
+
+  private ensureHighlightSourceAndGlowLayer(
     sourceId: string,
-    layerId: string,
-    paint: { color: string; width: number },
+    glowLayerId: string,
+    glow: RouteHighlightGlow,
   ): void {
     if (!this.map.getSource(sourceId)) {
       this.map.addSource(sourceId, {
@@ -387,22 +490,41 @@ export class Map {
       });
     }
 
-    if (!this.map.getLayer(layerId)) {
-      this.map.addLayer({
+    this.ensureHighlightGlowLayer(glowLayerId, sourceId, glow);
+  }
+
+  private ensureHighlightGlowLayer(
+    layerId: string,
+    sourceId: string,
+    glow: RouteHighlightGlow,
+  ): void {
+    if (this.map.getLayer(layerId)) {
+      this.map.setPaintProperty(layerId, "line-color", glow.color);
+      this.map.setPaintProperty(layerId, "line-width", glow.width);
+      this.map.setPaintProperty(layerId, "line-opacity", glow.opacity);
+      this.map.setPaintProperty(layerId, "line-blur", glow.blur);
+      return;
+    }
+
+    const beforeId = this.getRouteHighlightBeforeLayerId();
+    this.map.addLayer(
+      {
         id: layerId,
         type: "line",
         source: sourceId,
         paint: {
-          "line-color": paint.color,
-          "line-width": paint.width,
-          "line-opacity": 0.95,
+          "line-color": glow.color,
+          "line-width": glow.width,
+          "line-opacity": glow.opacity,
+          "line-blur": glow.blur,
         },
         layout: {
           "line-cap": "round",
           "line-join": "round",
         },
-      });
-    }
+      },
+      beforeId,
+    );
   }
 
   private setHighlightSourceData(

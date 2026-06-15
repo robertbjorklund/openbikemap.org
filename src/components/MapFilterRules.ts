@@ -79,9 +79,13 @@ const BASEMAP_PATH_LAYER_IDS = [
 
 ] as const;
 
-const TRAIL_STS_LAYER_IDS = [
+const TRAIL_CASING_LAYER_IDS = [
 
   "trails-casing",
+
+] as const;
+
+const TRAIL_STS_LAYER_IDS = [
 
   "trails",
 
@@ -95,6 +99,8 @@ const TRAIL_IMBA_LAYER_IDS = [
 
 const TRAIL_COMBINED_LAYER_IDS = [
 
+  "trails-label-stripe",
+
   "trails-label",
 
   "tappable-trail",
@@ -102,6 +108,8 @@ const TRAIL_COMBINED_LAYER_IDS = [
 ] as const;
 
 const TRAIL_LAYER_IDS = [
+
+  ...TRAIL_CASING_LAYER_IDS,
 
   ...TRAIL_STS_LAYER_IDS,
 
@@ -116,6 +124,8 @@ const ROUTE_LAYER_IDS = [
   "routes-casing",
 
   "routes",
+
+  "routes-label-stripe",
 
   "routes-label",
 
@@ -318,6 +328,14 @@ function buildTrailLayerFilter(
     return imbaScaleFilter
       ? imbaBranch([imbaScaleFilter])
       : imbaBranch([]);
+  }
+
+  if ((TRAIL_CASING_LAYER_IDS as readonly string[]).includes(layerId)) {
+    const branches: maplibregl.ExpressionFilterSpecification[] = [
+      stsScaleFilter ? stsBranch([stsScaleFilter]) : stsBranch([]),
+      imbaScaleFilter ? imbaBranch([imbaScaleFilter]) : imbaBranch([]),
+    ];
+    return ["any", ...branches];
   }
 
   if ((TRAIL_STS_LAYER_IDS as readonly string[]).includes(layerId)) {

@@ -1,42 +1,29 @@
 import { Box, Typography } from "@mui/material";
 import * as React from "react";
 import { MapStyle } from "../MapStyle";
+import { BASEMAP_OPTIONS } from "./BasemapOptions";
 import EventBus from "./EventBus";
-
-const BASEMAP_OPTIONS: {
-  style: MapStyle;
-  label: string;
-  description: string;
-  preview: string;
-}[] = [
-  {
-    style: MapStyle.Terrain,
-    label: "Terrain",
-    description: "Topographic map",
-    preview:
-      "linear-gradient(160deg, #f5f5f0 0%, #dce8d4 35%, #b8d4a8 65%, #8fbc8f 100%)",
-  },
-  {
-    style: MapStyle.Satellite,
-    label: "Satellite",
-    description: "Aerial imagery",
-    preview:
-      "linear-gradient(160deg, #6b7b8c 0%, #5a6b52 40%, #4a5540 70%, #3a4038 100%)",
-  },
-];
 
 export const BasemapStylePicker: React.FunctionComponent<{
   mapStyle: MapStyle;
   eventBus: EventBus;
+  sectionTitle?: string;
+  showDescription?: boolean;
+  onStyleSelected?: () => void;
 }> = (props) => {
+  const sectionTitle = props.sectionTitle ?? "Base map";
+  const showDescription = props.showDescription ?? true;
+
   return (
     <>
-      <Typography variant="subtitle1" sx={{ mb: 0.5 }}>
-        Base map
+      <Typography variant="subtitle1" sx={{ mb: showDescription ? 0.5 : 1 }}>
+        {sectionTitle}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Trails and routes are shown on top of the base map.
-      </Typography>
+      {showDescription && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Trails and routes are shown on top of the base map.
+        </Typography>
+      )}
 
       <Box
         sx={{
@@ -57,7 +44,10 @@ export const BasemapStylePicker: React.FunctionComponent<{
               role="radio"
               aria-checked={selected}
               aria-label={`${option.label}: ${option.description}`}
-              onClick={() => props.eventBus.setMapStyle(option.style)}
+              onClick={() => {
+                props.eventBus.setMapStyle(option.style);
+                props.onStyleSelected?.();
+              }}
               sx={{
                 display: "flex",
                 flexDirection: "column",

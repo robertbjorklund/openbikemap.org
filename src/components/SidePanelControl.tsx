@@ -71,25 +71,15 @@ export class SidePanelControl implements maplibregl.IControl {
 
 
   constructor(
-
     private eventBus: EventBus,
-
     mapFilters: MapFilters,
-
     mapStyle: MapStyle,
-
   ) {
-
     this.mapFilters = mapFilters;
-
     this.mapStyle = mapStyle;
-
     this.panel = document.createElement("div");
-
     this.placeholder = document.createElement("div");
-
     this.placeholder.style.display = "none";
-
   }
 
 
@@ -147,35 +137,22 @@ export class SidePanelControl implements maplibregl.IControl {
   };
 
   setView = (
-
     view: SidePanelView,
-
     options?: {
-
       mapFilters?: MapFilters;
-
       mapStyle?: MapStyle;
-
       infoFeature?: MapFeature | null;
-
       routeGroup?: RouteGroupSelection | null;
-
     },
-
   ) => {
-
     this.view = view;
 
     if (options?.mapFilters) {
-
       this.mapFilters = options.mapFilters;
-
     }
 
     if (options?.mapStyle) {
-
       this.mapStyle = options.mapStyle;
-
     }
 
     if (options?.infoFeature !== undefined) {
@@ -258,19 +235,12 @@ export class SidePanelControl implements maplibregl.IControl {
 
 
     if (this.view === "mapLayers") {
-
       content = (
-
         <MapLayersPanel
-
           eventBus={this.eventBus}
-
           mapStyle={this.mapStyle}
-
         />
-
       );
-
     } else if (this.view === "mtbFilter") {
       content = (
         <MtbFilterPanel eventBus={this.eventBus} mapFilters={this.mapFilters} />
@@ -282,7 +252,6 @@ export class SidePanelControl implements maplibregl.IControl {
           mapFilters={this.mapFilters}
         />
       );
-
     } else if (this.view === "settings") {
 
       content = <SettingsPanel eventBus={this.eventBus} />;

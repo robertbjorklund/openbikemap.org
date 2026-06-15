@@ -4,16 +4,16 @@ import { mapFeatureFromMvt } from "../components/MvtFeature";
 import { FeatureType, type MapFeature } from "../types/FeatureTypes";
 import {
   getFeatureGroupKey,
+  getRouteLinkKeys,
   matchesGroupKey,
 } from "../types/FeatureGroupKeys";
 
 export type { FeatureGroupKey, RouteGroupKey, TrailGroupKey } from "../types/FeatureGroupKeys";
 export {
   getFeatureGroupKey,
-  getRouteGroupKey,
+  getRouteLinkKeys,
   getTrailGroupKey,
   matchesGroupKey,
-  matchesRouteGroupKey,
   matchesTrailGroupKey,
   normalizeRouteName,
   normalizeTrailName,
@@ -99,6 +99,17 @@ export function findRelatedFeatures(
     }
     if (feature.properties.id === primaryId) {
       matches.push(feature);
+      continue;
+    }
+    if (groupKey?.routeLinkKeys?.length) {
+      if (
+        feature.properties.type === FeatureType.Route &&
+        getRouteLinkKeys(feature.properties).some((linkKey) =>
+          groupKey.routeLinkKeys!.includes(linkKey),
+        )
+      ) {
+        matches.push(feature);
+      }
       continue;
     }
     if (groupKey?.groupId && feature.properties.groupId === groupKey.groupId) {

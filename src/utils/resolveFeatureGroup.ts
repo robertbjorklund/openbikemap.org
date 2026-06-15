@@ -1,14 +1,31 @@
 import { searchFeatures, loadFeatureGroup } from "../components/GeoJSONLoader";
-import { type MapFeature } from "../types/FeatureTypes";
+import { FeatureType, type MapFeature } from "../types/FeatureTypes";
 import {
   getFeatureGroupKey,
   getFeatureGroupSearchQueries,
   matchesGroupKey,
 } from "../types/FeatureGroupKeys";
+import { routeLinkKeysIntersect } from "./RouteDisplayName";
 import { mergeTileClips } from "./FeatureGroup";
 
 /** Max search hits when resolving a logical trail/route group via the API. */
 export const FEATURE_GROUP_SEARCH_LIMIT = 200;
+
+function filterRoutesByLinkKeys(
+  primary: MapFeature,
+  features: MapFeature[],
+): MapFeature[] {
+  if (primary.properties.type !== FeatureType.Route) {
+    return features;
+  }
+
+  const primaryRoute = primary.properties;
+  return features.filter(
+    (feature) =>
+      feature.properties.type !== FeatureType.Route ||
+      routeLinkKeysIntersect(primaryRoute, feature.properties),
+  );
+}
 
 /**
  * Resolve all features belonging to the same logical group as {@link primary}.
@@ -32,7 +49,10 @@ export async function resolveFeatureGroup(
 
   if (groupId) {
     try {
-      const groupFeatures = await loadFeatureGroup(groupId);
+      const groupFeatures = filterRoutesByLinkKeys(
+        primary,
+        await loadFeatureGroup(groupId),
+      );
       for (const hit of groupFeatures) {
         if (
           hit.properties.type === expectedType &&
@@ -71,5 +91,5 @@ export async function resolveFeatureGroup(
     }
   }
 
-  return [...byId.values()];
+  return filterRoutesByLinkKeys(primary, [...byId.values()]);
 }

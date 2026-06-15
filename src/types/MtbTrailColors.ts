@@ -112,3 +112,29 @@ export const MTB_TRAIL_LINE_COLOR_EXPRESSION = [
   MTB_TRAIL_COLOR_BLACK,
   MTB_TRAIL_COLOR_ORANGE,
 ] as const;
+
+/** Explicit IMBA 0 (white diamond) — requires tag present, not missing coerced to 0 */
+export const IS_WHITE_IMBA_TRAIL_MATCH_EXPRESSION = [
+  "all",
+  ["has", "mtbScaleImba"],
+  ["match", ["get", "mtbScaleImba"], 0, true, false],
+] as const;
+
+/** Light gray casing for white IMBA 0; white for all other MTB trails */
+export const TRAIL_CASING_LINE_COLOR_EXPRESSION = [
+  "case",
+  IS_WHITE_IMBA_TRAIL_MATCH_EXPRESSION,
+  "#d4d4d4",
+  "#ffffff",
+] as const;
+
+/** Slightly wider dashed line so white IMBA trails stay visible without casing */
+export const TRAIL_IMBA_LINE_WIDTH_EXPRESSION = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  10,
+  ["case", IS_WHITE_IMBA_TRAIL_MATCH_EXPRESSION, 1.4, 1],
+  14,
+  ["case", IS_WHITE_IMBA_TRAIL_MATCH_EXPRESSION, 3.2, 2.8],
+] as const;
