@@ -63,6 +63,10 @@ export default class StateReducer implements EventBus {
     this.toggleSidePanel("mtbFilter");
   };
 
+  openImbaFilter = () => {
+    this.toggleSidePanel("imbaFilter");
+  };
+
   openRoutesFilter = () => {
     this.toggleSidePanel("routesFilter");
   };
@@ -144,15 +148,36 @@ export default class StateReducer implements EventBus {
       mapFilters.hiddenMtbImbaScales = enabling
         ? []
         : [...IMBA_SCALE_FILTERS];
+      mapFilters.showMtbSts = enabling;
+      mapFilters.showMtbImba = enabling;
     }
 
     if (activity === BikeActivity.Routes) {
       mapFilters.hiddenRouteNetworks = enabling
         ? []
         : [...ROUTE_NETWORK_FILTERS];
+      mapFilters.showRoutes = enabling;
     }
 
     this.update({ mapFilters });
+  };
+
+  toggleMtbStsGroup = () => {
+    this.update({
+      mapFilters: {
+        ...this._state.mapFilters,
+        showMtbSts: !this._state.mapFilters.showMtbSts,
+      },
+    });
+  };
+
+  toggleMtbImbaGroup = () => {
+    this.update({
+      mapFilters: {
+        ...this._state.mapFilters,
+        showMtbImba: !this._state.mapFilters.showMtbImba,
+      },
+    });
   };
 
   toggleMtbScale = (scale: MtbScaleFilter) => {
@@ -161,22 +186,10 @@ export default class StateReducer implements EventBus {
       ? hidden.filter((s) => s !== scale)
       : [...hidden, scale];
 
-    const allScalesHidden =
-      MTB_SCALE_FILTERS.every((value) => hiddenMtbScales.includes(value)) &&
-      IMBA_SCALE_FILTERS.every((value) =>
-        this._state.mapFilters.hiddenMtbImbaScales.includes(value),
-      );
-    const hiddenActivities = allScalesHidden
-      ? [...new Set([...this._state.mapFilters.hiddenActivities, BikeActivity.Mtb])]
-      : this._state.mapFilters.hiddenActivities.filter(
-          (activity) => activity !== BikeActivity.Mtb,
-        );
-
     this.update({
       mapFilters: {
         ...this._state.mapFilters,
         hiddenMtbScales,
-        hiddenActivities,
       },
     });
   };
@@ -187,22 +200,19 @@ export default class StateReducer implements EventBus {
       ? hidden.filter((s) => s !== scale)
       : [...hidden, scale];
 
-    const allScalesHidden =
-      MTB_SCALE_FILTERS.every((value) =>
-        this._state.mapFilters.hiddenMtbScales.includes(value),
-      ) &&
-      IMBA_SCALE_FILTERS.every((value) => hiddenMtbImbaScales.includes(value));
-    const hiddenActivities = allScalesHidden
-      ? [...new Set([...this._state.mapFilters.hiddenActivities, BikeActivity.Mtb])]
-      : this._state.mapFilters.hiddenActivities.filter(
-          (activity) => activity !== BikeActivity.Mtb,
-        );
-
     this.update({
       mapFilters: {
         ...this._state.mapFilters,
         hiddenMtbImbaScales,
-        hiddenActivities,
+      },
+    });
+  };
+
+  toggleRoutesGroup = () => {
+    this.update({
+      mapFilters: {
+        ...this._state.mapFilters,
+        showRoutes: !this._state.mapFilters.showRoutes,
       },
     });
   };
@@ -213,25 +223,10 @@ export default class StateReducer implements EventBus {
       ? hidden.filter((value) => value !== network)
       : [...hidden, network];
 
-    const allNetworksHidden = ROUTE_NETWORK_FILTERS.every((value) =>
-      hiddenRouteNetworks.includes(value),
-    );
-    const hiddenActivities = allNetworksHidden
-      ? [
-          ...new Set([
-            ...this._state.mapFilters.hiddenActivities,
-            BikeActivity.Routes,
-          ]),
-        ]
-      : this._state.mapFilters.hiddenActivities.filter(
-          (activity) => activity !== BikeActivity.Routes,
-        );
-
     this.update({
       mapFilters: {
         ...this._state.mapFilters,
         hiddenRouteNetworks,
-        hiddenActivities,
       },
     });
   };

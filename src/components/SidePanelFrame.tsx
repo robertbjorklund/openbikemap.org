@@ -66,6 +66,8 @@ export const SidePanelFrame: React.FunctionComponent<
 
           onOpenMtbFilter={withSearchClosed(() => props.eventBus.openMtbFilter())}
 
+          onOpenImbaFilter={withSearchClosed(() => props.eventBus.openImbaFilter())}
+
           onOpenRoutesFilter={withSearchClosed(() =>
             props.eventBus.openRoutesFilter(),
           )}

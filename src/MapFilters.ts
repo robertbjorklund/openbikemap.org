@@ -7,6 +7,12 @@ export default interface MapFilters {
   hiddenMtbScales: MtbScaleFilter[];
   hiddenMtbImbaScales: MtbImbaScaleFilter[];
   hiddenRouteNetworks: RouteNetworkFilter[];
+  /** Show STS trails on the map (checkbox selections preserved when off). */
+  showMtbSts: boolean;
+  /** Show IMBA trails on the map (checkbox selections preserved when off). */
+  showMtbImba: boolean;
+  /** Show bicycle routes on the map (checkbox selections preserved when off). */
+  showRoutes: boolean;
 }
 
 export const defaultMapFilters: MapFilters = {
@@ -14,4 +20,7 @@ export const defaultMapFilters: MapFilters = {
   hiddenMtbScales: [],
   hiddenMtbImbaScales: [],
   hiddenRouteNetworks: [],
+  showMtbSts: true,
+  showMtbImba: true,
+  showRoutes: true,
 };

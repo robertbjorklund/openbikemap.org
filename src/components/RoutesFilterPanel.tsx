@@ -1,3 +1,4 @@
+import { Switch } from "@mui/material";
 import * as React from "react";
 import MapFilters from "../MapFilters";
 import {
@@ -15,6 +16,14 @@ export const RoutesFilterPanel: React.FunctionComponent<{
   return (
     <PanelShell
       title={BIKE_ACTIVITY_LABELS[BikeActivity.Routes]}
+      subtitle="Signed long-distance cycling routes (asphalt and gravel)."
+      actions={
+        <Switch
+          checked={props.mapFilters.showRoutes}
+          onChange={() => props.eventBus.toggleRoutesGroup()}
+          inputProps={{ "aria-label": "Show bicycle routes on map" }}
+        />
+      }
       onClose={() => props.eventBus.closeMenu()}
     >
       <RoutesFilterContent

@@ -16,6 +16,8 @@ import { CreditsPanel } from "./CreditsPanel";
 
 import EventBus from "./EventBus";
 
+import { ImbaFilterPanel } from "./ImbaFilterPanel";
+
 import { MtbFilterPanel } from "./MtbFilterPanel";
 
 import { RoutesFilterPanel } from "./RoutesFilterPanel";
@@ -244,6 +246,10 @@ export class SidePanelControl implements maplibregl.IControl {
     } else if (this.view === "mtbFilter") {
       content = (
         <MtbFilterPanel eventBus={this.eventBus} mapFilters={this.mapFilters} />
+      );
+    } else if (this.view === "imbaFilter") {
+      content = (
+        <ImbaFilterPanel eventBus={this.eventBus} mapFilters={this.mapFilters} />
       );
     } else if (this.view === "routesFilter") {
       content = (

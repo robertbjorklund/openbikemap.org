@@ -7,37 +7,37 @@ import {
 import * as React from "react";
 import MapFilters from "../MapFilters";
 import {
-  MTB_SCALE_FILTER_LABELS,
-  MTB_SCALE_FILTERS,
+  IMBA_SCALE_FILTER_LABELS,
+  IMBA_SCALE_FILTERS,
 } from "../types/BikeActivity";
 import EventBus from "./EventBus";
 import { dimmedFilterControlSx } from "./FilterControlStyles";
-import { MtbScaleLegendIcon } from "./MtbScaleLegendIcon";
+import { MtbImbaLegendIcon } from "./MtbImbaLegendIcon";
 
-export const MtbFilterContent: React.FunctionComponent<{
+export const ImbaFilterContent: React.FunctionComponent<{
   eventBus: EventBus;
   mapFilters: MapFilters;
 }> = (props) => {
-  const groupEnabled = props.mapFilters.showMtbSts;
+  const groupEnabled = props.mapFilters.showMtbImba;
 
   return (
     <FormGroup>
-      {MTB_SCALE_FILTERS.map((scale) => (
+      {IMBA_SCALE_FILTERS.map((scale) => (
         <FormControlLabel
-          key={scale}
+          key={`imba-${scale}`}
           sx={dimmedFilterControlSx(groupEnabled)}
           control={
             <Checkbox
               size="small"
-              checked={!props.mapFilters.hiddenMtbScales.includes(scale)}
-              onChange={() => props.eventBus.toggleMtbScale(scale)}
+              checked={!props.mapFilters.hiddenMtbImbaScales.includes(scale)}
+              onChange={() => props.eventBus.toggleMtbImbaScale(scale)}
             />
           }
           label={
             <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <MtbScaleLegendIcon scale={scale} />
+              <MtbImbaLegendIcon scale={scale} />
               <Typography variant="body2" component="span">
-                {MTB_SCALE_FILTER_LABELS[scale]}
+                {IMBA_SCALE_FILTER_LABELS[scale]}
               </Typography>
             </span>
           }

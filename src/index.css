@@ -329,6 +329,12 @@ body {
   width: 100%;
 }
 
+.side-panel-rail-divider {
+  width: 40px;
+  margin: 4px 0;
+  border-color: #dadce0;
+}
+
 .side-panel-rail-bottom {
   margin-top: auto;
   padding-bottom: 12px;

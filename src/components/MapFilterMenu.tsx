@@ -14,7 +14,8 @@ export const MapFilterMenu: React.FunctionComponent<{
         <BasemapStylePicker
           mapStyle={props.mapStyle}
           eventBus={props.eventBus}
-          sectionTitle="Map type"
+          layout="row"
+          showSectionTitle={false}
           showDescription={false}
           onStyleSelected={props.onClose}
         />

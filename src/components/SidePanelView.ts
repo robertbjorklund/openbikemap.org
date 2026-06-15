@@ -1,6 +1,7 @@
 export type SidePanelView =
   | "mapLayers"
   | "mtbFilter"
+  | "imbaFilter"
   | "routesFilter"
   | "route"
   | "settings"

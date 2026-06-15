@@ -4,11 +4,12 @@ import RouteIcon from "@mui/icons-material/Route";
 import SearchIcon from "@mui/icons-material/Search";
 import SettingsIcon from "@mui/icons-material/Settings";
 import CookieIcon from "@mui/icons-material/Cookie";
-import { IconButton } from "@mui/material";
+import { Divider, IconButton } from "@mui/material";
 import * as React from "react";
 import { AboutRailIcon } from "./icons/AboutRailIcon";
 import { BicycleRouteRailIcon } from "./icons/BicycleRouteRailIcon";
-import { MtbRailIcon } from "./icons/MtbRailIcon";
+import { StsRailIcon } from "./icons/StsRailIcon";
+import { ImbaRailIcon } from "./icons/ImbaRailIcon";
 import type { SidePanelNavView, SidePanelView } from "./SidePanelView";
 
 const RAIL_ICON_SX = { fontSize: 26 };
@@ -25,6 +26,7 @@ export const SidePanelRail: React.FunctionComponent<{
   onOpenMapLayers: () => void;
   onOpenRoute: () => void;
   onOpenMtbFilter: () => void;
+  onOpenImbaFilter: () => void;
   onOpenRoutesFilter: () => void;
   onOpenSettings: () => void;
   onOpenCredits: () => void;
@@ -47,15 +49,7 @@ export const SidePanelRail: React.FunctionComponent<{
           <SearchIcon sx={RAIL_ICON_SX} />
         </IconButton>
 
-        <IconButton
-          className={railButtonClass(isActive("mtbFilter"))}
-          aria-label="MTB filter"
-          aria-pressed={isActive("mtbFilter")}
-          title="MTB"
-          onClick={props.onOpenMtbFilter}
-        >
-          <MtbRailIcon />
-        </IconButton>
+        <Divider className="side-panel-rail-divider" aria-hidden />
 
         <IconButton
           className={railButtonClass(isActive("routesFilter"))}
@@ -68,13 +62,23 @@ export const SidePanelRail: React.FunctionComponent<{
         </IconButton>
 
         <IconButton
-          className={railButtonClass(isActive("mapLayers"))}
-          aria-label="Map layers"
-          aria-pressed={isActive("mapLayers")}
-          title="Map layers"
-          onClick={props.onOpenMapLayers}
+          className={railButtonClass(isActive("mtbFilter"))}
+          aria-label="STS filter"
+          aria-pressed={isActive("mtbFilter")}
+          title="STS"
+          onClick={props.onOpenMtbFilter}
         >
-          <LayersIcon sx={RAIL_ICON_SX} />
+          <StsRailIcon />
+        </IconButton>
+
+        <IconButton
+          className={railButtonClass(isActive("imbaFilter"))}
+          aria-label="IMBA filter"
+          aria-pressed={isActive("imbaFilter")}
+          title="IMBA"
+          onClick={props.onOpenImbaFilter}
+        >
+          <ImbaRailIcon />
         </IconButton>
 
         <IconButton
@@ -85,6 +89,18 @@ export const SidePanelRail: React.FunctionComponent<{
           onClick={props.onOpenRoute}
         >
           <RouteIcon sx={RAIL_ICON_SX} />
+        </IconButton>
+
+        <Divider className="side-panel-rail-divider" aria-hidden />
+
+        <IconButton
+          className={railButtonClass(isActive("mapLayers"))}
+          aria-label="Map layers"
+          aria-pressed={isActive("mapLayers")}
+          title="Map layers"
+          onClick={props.onOpenMapLayers}
+        >
+          <LayersIcon sx={RAIL_ICON_SX} />
         </IconButton>
 
         <IconButton

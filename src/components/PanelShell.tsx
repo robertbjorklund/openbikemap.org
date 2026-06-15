@@ -7,6 +7,7 @@ import { AppConfig } from "../AppConfig";
 export const PanelShell: React.FunctionComponent<
   React.PropsWithChildren<{
     title?: string;
+    subtitle?: string;
     titleIcon?: React.ReactNode;
     onClose: () => void;
     onBack?: () => void;
@@ -76,28 +77,52 @@ export const PanelShell: React.FunctionComponent<
 
       <Divider />
 
-      {(props.title || props.titleIcon || props.actions) && (
+      {(props.title || props.titleIcon || props.actions || props.subtitle) && (
         <Box
           sx={{
             px: 2,
             pt: 1.5,
-            pb: props.actions ? 1 : 0,
+            pb: 1,
             flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
           }}
         >
-          {props.titleIcon}
-          {props.title && (
-            <Typography
-              variant="subtitle1"
-              sx={{ fontWeight: 600, flex: 1, minWidth: 0 }}
+          {(props.titleIcon || props.title || props.actions) && (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                mb: props.subtitle ? 0.5 : 0,
+              }}
             >
-              {props.title}
+              {(props.titleIcon || props.title) && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  {props.titleIcon}
+                  {props.title && (
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                      {props.title}
+                    </Typography>
+                  )}
+                </Box>
+              )}
+              {props.actions && (
+                <Box sx={{ flexShrink: 0 }}>{props.actions}</Box>
+              )}
+            </Box>
+          )}
+          {props.subtitle && (
+            <Typography variant="body2" color="text.secondary">
+              {props.subtitle}
             </Typography>
           )}
-          {props.actions}
         </Box>
       )}
 

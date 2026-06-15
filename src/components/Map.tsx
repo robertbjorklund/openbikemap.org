@@ -61,11 +61,22 @@ const ROUTE_HIGHLIGHT_GLOW_LAYER_IDS = [
   SELECTED_STAGE_GLOW_LAYER_ID,
 ] as const;
 
+interface RouteHighlightOutline {
+  color: string;
+  width: maplibregl.ExpressionSpecification;
+  opacity: maplibregl.ExpressionSpecification;
+}
+
 interface RouteHighlightGlow {
   color: string;
   opacity: number;
   width: maplibregl.ExpressionSpecification;
-  blur: number;
+  blur: maplibregl.ExpressionSpecification | number;
+  outline?: RouteHighlightOutline;
+}
+
+function highlightOutlineLayerId(glowLayerId: string): string {
+  return `${glowLayerId}-outline`;
 }
 
 const ROUTE_HIGHLIGHT_GLOW_WIDTH: maplibregl.ExpressionSpecification = [
@@ -73,15 +84,15 @@ const ROUTE_HIGHLIGHT_GLOW_WIDTH: maplibregl.ExpressionSpecification = [
   ["linear"],
   ["zoom"],
   8,
-  4,
+  8,
   11,
-  7,
+  12,
   14,
-  14,
+  21,
   16,
-  16,
+  24,
   18,
-  16,
+  24,
 ];
 
 const ROUTE_HIGHLIGHT_YELLOW_GLOW_WIDTH: maplibregl.ExpressionSpecification = [
@@ -89,24 +100,72 @@ const ROUTE_HIGHLIGHT_YELLOW_GLOW_WIDTH: maplibregl.ExpressionSpecification = [
   ["linear"],
   ["zoom"],
   8,
-  5,
   11,
-  8,
+  11,
   14,
+  14,
+  24,
   16,
+  26,
+  18,
+  26,
+];
+
+const ROUTE_HIGHLIGHT_YELLOW_OUTLINE_WIDTH: maplibregl.ExpressionSpecification = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  8,
+  15,
+  11,
+  18,
+  14,
+  28,
   16,
+  30,
   18,
-  18,
-  18,
+  30,
+];
+
+/** Dark edge around yellow glow — strongest when zoomed out. */
+const ROUTE_HIGHLIGHT_YELLOW_OUTLINE_OPACITY: maplibregl.ExpressionSpecification = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  8,
+  0.95,
+  10,
+  0.75,
+  12,
+  0.35,
+  14,
+  0,
+];
+
+const ROUTE_HIGHLIGHT_YELLOW_GLOW_BLUR: maplibregl.ExpressionSpecification = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  8,
+  0.2,
+  11,
+  1,
+  14,
+  1.5,
 ];
 
 const ROUTE_HIGHLIGHT_GLOW_BLUR = 1.5;
 
 const ROUTE_HIGHLIGHT_YELLOW_GLOW: RouteHighlightGlow = {
   color: "#ffeb3b",
-  opacity: 0.82,
+  opacity: 0.88,
   width: ROUTE_HIGHLIGHT_YELLOW_GLOW_WIDTH,
-  blur: ROUTE_HIGHLIGHT_GLOW_BLUR,
+  blur: ROUTE_HIGHLIGHT_YELLOW_GLOW_BLUR,
+  outline: {
+    color: "#8d6e00",
+    width: ROUTE_HIGHLIGHT_YELLOW_OUTLINE_WIDTH,
+    opacity: ROUTE_HIGHLIGHT_YELLOW_OUTLINE_OPACITY,
+  },
 };
 
 const ROUTE_HIGHLIGHT_ORANGE_GLOW: RouteHighlightGlow = {
@@ -475,6 +534,11 @@ export class Map {
       if (this.map.getLayer(layerId)) {
         this.map.moveLayer(layerId, beforeId);
       }
+
+      const outlineLayerId = highlightOutlineLayerId(layerId);
+      if (this.map.getLayer(outlineLayerId)) {
+        this.map.moveLayer(outlineLayerId, layerId);
+      }
     }
   }
 
@@ -498,6 +562,12 @@ export class Map {
     sourceId: string,
     glow: RouteHighlightGlow,
   ): void {
+    if (glow.outline) {
+      this.ensureHighlightOutlineLayer(layerId, sourceId, glow.outline);
+    } else {
+      this.removeHighlightOutlineLayer(layerId);
+    }
+
     if (this.map.getLayer(layerId)) {
       this.map.setPaintProperty(layerId, "line-color", glow.color);
       this.map.setPaintProperty(layerId, "line-width", glow.width);
@@ -525,6 +595,48 @@ export class Map {
       },
       beforeId,
     );
+  }
+
+  private ensureHighlightOutlineLayer(
+    glowLayerId: string,
+    sourceId: string,
+    outline: RouteHighlightOutline,
+  ): void {
+    const layerId = highlightOutlineLayerId(glowLayerId);
+
+    if (this.map.getLayer(layerId)) {
+      this.map.setPaintProperty(layerId, "line-color", outline.color);
+      this.map.setPaintProperty(layerId, "line-width", outline.width);
+      this.map.setPaintProperty(layerId, "line-opacity", outline.opacity);
+      return;
+    }
+
+    const beforeId = this.getRouteHighlightBeforeLayerId();
+    this.map.addLayer(
+      {
+        id: layerId,
+        type: "line",
+        source: sourceId,
+        paint: {
+          "line-color": outline.color,
+          "line-width": outline.width,
+          "line-opacity": outline.opacity,
+          "line-blur": 0,
+        },
+        layout: {
+          "line-cap": "round",
+          "line-join": "round",
+        },
+      },
+      beforeId,
+    );
+  }
+
+  private removeHighlightOutlineLayer(glowLayerId: string): void {
+    const layerId = highlightOutlineLayerId(glowLayerId);
+    if (this.map.getLayer(layerId)) {
+      this.map.removeLayer(layerId);
+    }
   }
 
   private setHighlightSourceData(

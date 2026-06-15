@@ -1,6 +1,5 @@
 import * as React from "react";
-import { PedalBikeRailIcon } from "./PedalBikeRailIcon";
+import { StsRailIcon } from "./StsRailIcon";
 
-export const MtbRailIcon: React.FunctionComponent = () => (
-  <PedalBikeRailIcon variant="rough" />
-);
+/** @deprecated Use StsRailIcon */
+export const MtbRailIcon: React.FunctionComponent = () => <StsRailIcon />;

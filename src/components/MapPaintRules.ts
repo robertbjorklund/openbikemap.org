@@ -31,9 +31,11 @@ const ROUTE_LINE_WIDTH: maplibregl.ExpressionSpecification = [
   ["linear"],
   ["zoom"],
   8,
-  1,
+  2.2,
   14,
-  2.8,
+  4,
+  16,
+  4.5,
 ];
 
 const ROUTE_CASING_LINE_WIDTH: maplibregl.ExpressionSpecification = [
@@ -41,29 +43,39 @@ const ROUTE_CASING_LINE_WIDTH: maplibregl.ExpressionSpecification = [
   ["linear"],
   ["zoom"],
   8,
-  2.5,
+  4.5,
   14,
-  5.5,
+  8,
+  16,
+  9,
 ];
 
 const TRAIL_LINE_WIDTH: maplibregl.ExpressionSpecification = [
   "interpolate",
   ["linear"],
   ["zoom"],
+  8,
+  1.8,
   10,
-  1,
+  2.2,
   14,
-  2.8,
+  4,
+  16,
+  4.5,
 ];
 
 const TRAIL_CASING_LINE_WIDTH: maplibregl.ExpressionSpecification = [
   "interpolate",
   ["linear"],
   ["zoom"],
+  8,
+  4,
   10,
-  3,
+  5,
   14,
-  6.5,
+  9,
+  16,
+  10,
 ];
 
 const LABEL_TEXT_COLOR = "#212121";

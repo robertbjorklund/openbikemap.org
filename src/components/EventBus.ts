@@ -48,6 +48,8 @@ export default interface EventBus {
 
   openMtbFilter(): void;
 
+  openImbaFilter(): void;
+
   openRoutesFilter(): void;
 
   openRoute(): void;
@@ -70,9 +72,15 @@ export default interface EventBus {
 
   toggleActivity(activity: BikeActivity): void;
 
+  toggleMtbStsGroup(): void;
+
+  toggleMtbImbaGroup(): void;
+
   toggleMtbScale(scale: MtbScaleFilter): void;
 
   toggleMtbImbaScale(scale: MtbImbaScaleFilter): void;
+
+  toggleRoutesGroup(): void;
 
   toggleRouteNetwork(network: RouteNetworkFilter): void;
 

@@ -16,6 +16,9 @@ export const MapLayersPanel: React.FunctionComponent<{
       <BasemapStylePicker
         mapStyle={props.mapStyle}
         eventBus={props.eventBus}
+        layout="row"
+        showSectionTitle={false}
+        showDescription={false}
       />
     </PanelShell>
   );
