@@ -1,4 +1,4 @@
-import { Box, Link, Typography } from "@mui/material";
+import { Box, Divider, Link, Typography } from "@mui/material";
 
 import type * as maplibregl from "maplibre-gl";
 
@@ -13,7 +13,7 @@ import { getSegmentCount } from "../utils/FeatureGroup";
 import { formatLength, getFeatureLengthMeters } from "../utils/Length";
 
 import { formatRouteStageLabel } from "../utils/RouteStage";
-
+import { getMapFeatureKind } from "../utils/MapFeatureKind";
 import { CardHeader } from "./CardHeader";
 
 import { ElevationStats } from "./ElevationStats";
@@ -25,6 +25,7 @@ import {
   TITLE_ICON_SIZE,
 } from "./InfoFeatureHeader";
 import { RouteNetworkLegendIcon } from "./RouteNetworkLegendIcon";
+import { MapFeatureKindRailIcon } from "./MapFeatureKindRailIcon";
 
 import { InfoPanelActions } from "./InfoPanelActions";
 
@@ -82,11 +83,15 @@ function RouteInfoBody({
 
       properties.network);
 
+  const featureKind = getMapFeatureKind(feature);
   const subtitle = isStageView && stageLabel
     ? stageLabel
     : networkLabel
-    ? `Bicycle route · ${networkLabel}`
-    : "Bicycle route";
+      ? `${featureKind.label} · ${networkLabel}`
+      : featureKind.label;
+  const subtitleIcon = (
+    <MapFeatureKindRailIcon kind={featureKind.kind} size={22} />
+  );
 
   const segmentCount = getSegmentCount(feature);
 
@@ -113,10 +118,14 @@ function RouteInfoBody({
         <InfoFeatureHeader
           title={title}
           subtitle={subtitle}
+          subtitleIcon={subtitleIcon}
           icon={networkIcon}
         />
       ) : (
-        <InfoFeatureHeader subtitle={subtitle} />
+        <InfoFeatureHeader
+          subtitle={subtitle}
+          subtitleIcon={subtitleIcon}
+        />
       )}
 
       {routeGroup && !routeGroup.activeStageId && (
@@ -139,7 +148,13 @@ function RouteInfoBody({
         </Typography>
       )}
 
-      {length && <Typography gutterBottom>Length: {length}</Typography>}
+      <Divider sx={{ my: 1.5 }} />
+
+      {length && (
+        <Typography variant="body2" gutterBottom>
+          Length: {length}
+        </Typography>
+      )}
 
       {properties.pavedRatio !== null && (
 
@@ -171,16 +186,13 @@ function RouteInfoBody({
 
       <ElevationStats feature={feature} map={map} />
 
-
-
       {showPanelActions && (
-
-        <Box sx={{ mt: 2, mb: 1 }}>
-
-          <InfoPanelActions feature={feature} />
-
-        </Box>
-
+        <>
+          <Divider sx={{ my: 1.5 }} />
+          <Box sx={{ mb: 1 }}>
+            <InfoPanelActions feature={feature} />
+          </Box>
+        </>
       )}
 
       {segmentCount > 1 && (

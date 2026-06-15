@@ -1,4 +1,4 @@
-import { Box, Typography } from "@mui/material";
+import { Box, Divider, Typography } from "@mui/material";
 
 import type * as maplibregl from "maplibre-gl";
 
@@ -20,31 +20,22 @@ import {
 
   TrailCategory,
 
-  TRAIL_CATEGORY_LABELS,
-
   type TrailFeature,
 
 } from "../types/FeatureTypes";
 
+import { getMapFeatureKind } from "../utils/MapFeatureKind";
 import { getSegmentCount } from "../utils/FeatureGroup";
-
 import { formatLength, getFeatureLengthMeters } from "../utils/Length";
-
 import { CardHeader } from "./CardHeader";
-
 import { ElevationStats } from "./ElevationStats";
-
 import EventBus from "./EventBus";
-
 import {
-
   InfoFeatureHeader,
-
   TITLE_ICON_SIZE,
-
 } from "./InfoFeatureHeader";
-
 import { InfoPanelActions } from "./InfoPanelActions";
+import { MapFeatureKindRailIcon } from "./MapFeatureKindRailIcon";
 
 import { MtbImbaLegendIcon } from "./MtbImbaLegendIcon";
 
@@ -84,37 +75,33 @@ function TrailInfoBody({
 
   const unitSystem = useUnitSystem();
 
-  const title =
-
-    properties.name || properties.ref || TRAIL_CATEGORY_LABELS[properties.category];
-
-  const length = formatLength(getFeatureLengthMeters(feature), unitSystem);
-
-  const segmentCount = getSegmentCount(feature);
-
   const isMtbTrail = properties.category === TrailCategory.MtbTrail;
 
   const isImbaTrail = properties.mtbScaleImba !== null;
 
   const scale = isImbaTrail
-
     ? toMtbImbaScaleFilter(properties.mtbScaleImba)
-
     : toMtbScaleFilter(properties.mtbScale);
 
   const scaleLabel = isImbaTrail
-
     ? IMBA_SCALE_FILTER_LABELS[scale as ReturnType<typeof toMtbImbaScaleFilter>]
-
     : MTB_SCALE_FILTER_LABELS[scale as ReturnType<typeof toMtbScaleFilter>];
 
   const ratingSystemLabel = isImbaTrail
-
     ? "IMBA — International Mountain Bicycling Association"
-
     : "STS — Single Track Scale";
 
-  const subtitle = TRAIL_CATEGORY_LABELS[properties.category];
+  const title = properties.name || properties.ref || ratingSystemLabel;
+
+  const length = formatLength(getFeatureLengthMeters(feature), unitSystem);
+
+  const segmentCount = getSegmentCount(feature);
+
+  const featureKind = getMapFeatureKind(feature);
+  const subtitle = featureKind.label;
+  const subtitleIcon = (
+    <MapFeatureKindRailIcon kind={featureKind.kind} size={22} />
+  );
 
   const difficultyIcon = isMtbTrail ? (
 
@@ -151,20 +138,20 @@ function TrailInfoBody({
       {showTitle && (
 
         <InfoFeatureHeader
-
           title={title}
-
           subtitle={subtitle}
-
+          subtitleIcon={subtitleIcon}
           icon={difficultyIcon}
-
         />
 
       )}
 
       {!showTitle && subtitle && (
 
-        <InfoFeatureHeader subtitle={subtitle} />
+        <InfoFeatureHeader
+          subtitle={subtitle}
+          subtitleIcon={subtitleIcon}
+        />
 
       )}
 
@@ -188,7 +175,13 @@ function TrailInfoBody({
 
       )}
 
-      {length && <Typography gutterBottom>Length: {length}</Typography>}
+      <Divider sx={{ my: 1.5 }} />
+
+      {length && (
+        <Typography variant="body2" gutterBottom>
+          Length: {length}
+        </Typography>
+      )}
 
       {properties.surface && (
 
@@ -216,16 +209,13 @@ function TrailInfoBody({
 
       <ElevationStats feature={feature} map={map} />
 
-
-
       {showPanelActions && (
-
-        <Box sx={{ mt: 2, mb: 1 }}>
-
-          <InfoPanelActions feature={feature} />
-
-        </Box>
-
+        <>
+          <Divider sx={{ my: 1.5 }} />
+          <Box sx={{ mb: 1 }}>
+            <InfoPanelActions feature={feature} />
+          </Box>
+        </>
       )}
 
       {segmentCount > 1 && (

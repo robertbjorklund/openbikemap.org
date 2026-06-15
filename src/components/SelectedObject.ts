@@ -5,6 +5,8 @@ export type { ObjectIDType };
 
 export interface PanConfig {
   animate: boolean;
+  lngLat: [number, number];
+  clickX: number;
 }
 
 export interface RouteGroupSelection {

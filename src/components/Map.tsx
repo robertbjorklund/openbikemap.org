@@ -6,6 +6,7 @@ import { MAP_STYLE_URLS, MapStyle } from "../MapStyle";
 import { FeatureType, type MapFeature } from "../types/FeatureTypes";
 import { featuresForHighlight } from "../utils/FeatureGroup";
 import { findRouteStageFeature } from "../utils/routeGroupSelection";
+import { panMapIfClickUnderSidePanelFlyout } from "../utils/mapInfoPanelFocus";
 import { formatRouteStageTooltip } from "../utils/RouteStage";
 import {
   CameraPosition,
@@ -17,6 +18,10 @@ import {
   applyFiltersToStyleLayers,
   isFeatureVisibleUnderFilters,
 } from "./MapFilterRules";
+import {
+  applyOpenBikeMapLineMinZoomToMap,
+  applyOpenBikeMapLineMinZoomToStyleLayers,
+} from "./MapLayerZoomRules";
 import {
   applyPaintRulesToMap,
   applyPaintRulesToStyleLayers,
@@ -189,6 +194,7 @@ export class Map {
   private routeGroupSelection: RouteGroupSelection | null = null;
   private hoveredStageId: string | null = null;
   private stageTooltipEl: HTMLDivElement;
+  private infoPanFeatureId: string | null = null;
 
   constructor(
     cameraPosition: CameraPosition,
@@ -285,6 +291,7 @@ export class Map {
       }
     });
     this.map.on("style.load", () => {
+      applyOpenBikeMapLineMinZoomToMap(this.map);
       applyPaintRulesToMap(this.map);
       applyFilterRulesToMap(this.map, this.currentFilters);
       this.updateSelectedHighlight();
@@ -323,8 +330,10 @@ export class Map {
 
     return {
       ...transformed,
-      layers: applyPaintRulesToStyleLayers(
-        applyFiltersToStyleLayers(transformed.layers, this.currentFilters),
+      layers: applyOpenBikeMapLineMinZoomToStyleLayers(
+        applyPaintRulesToStyleLayers(
+          applyFiltersToStyleLayers(transformed.layers, this.currentFilters),
+        ),
       ),
     };
   };
@@ -340,6 +349,7 @@ export class Map {
   }
 
   private applyFiltersToLiveMap = (): void => {
+    applyOpenBikeMapLineMinZoomToMap(this.map);
     applyFilterRulesToMap(this.map, this.currentFilters);
     applyPaintRulesToMap(this.map);
   };
@@ -390,6 +400,29 @@ export class Map {
         : null;
     this.selectedFeature = feature;
     this.updateSelectedHighlight();
+    this.focusMapForInfoPanel(selectedObject);
+  }
+
+  private focusMapForInfoPanel(
+    selectedObject: SelectedObject | null | undefined,
+  ): void {
+    if (!selectedObject?.showInfo || !selectedObject.pan) {
+      if (!selectedObject) {
+        this.infoPanFeatureId = null;
+      }
+      return;
+    }
+
+    if (this.infoPanFeatureId === selectedObject.id) {
+      return;
+    }
+
+    this.infoPanFeatureId = selectedObject.id;
+    panMapIfClickUnderSidePanelFlyout(
+      this.map,
+      selectedObject.pan.clickX,
+      selectedObject.pan.animate,
+    );
   }
 
   setHoveredRouteStage(

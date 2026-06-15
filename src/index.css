@@ -296,7 +296,7 @@ body {
   height: 100%;
   width: 80px;
   max-width: min(var(--side-panel-width, 480px), 100vw);
-  background: #fff;
+  background: transparent;
   box-shadow: 2px 0 6px rgba(0, 0, 0, 0.12);
   box-sizing: border-box;
   overflow: hidden;
@@ -318,6 +318,8 @@ body {
   height: 100%;
   padding: 12px 0;
   box-sizing: border-box;
+  background: var(--side-panel-rail-bg, #f1f4f5);
+  border-right: 1px solid var(--side-panel-rail-border, #e0e3e7);
 }
 
 .side-panel-rail-main,
@@ -332,7 +334,7 @@ body {
 .side-panel-rail-divider {
   width: 40px;
   margin: 4px 0;
-  border-color: #dadce0;
+  border-color: #d0d4d9;
 }
 
 .side-panel-rail-bottom {
@@ -357,6 +359,7 @@ body {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  background: #fff;
 }
 
 .side-panel-inner {

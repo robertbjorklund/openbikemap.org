@@ -21,7 +21,7 @@ export const AppConfig = {
 
    * UI chrome only — not used for map features.
 
-   * Teal sits apart from MTB legend colors: green #2e7d32, blue #1565c0, red #d32f2f.
+   * Teal sits apart from MTB legend colors: STS blue/red/black, IMBA green/blue/black/orange.
 
    */
 

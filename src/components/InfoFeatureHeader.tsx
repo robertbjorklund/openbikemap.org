@@ -6,6 +6,7 @@ const TITLE_ICON_SIZE = 48;
 export const InfoFeatureHeader: React.FunctionComponent<{
   title?: string;
   subtitle?: string;
+  subtitleIcon?: React.ReactNode;
   icon?: React.ReactNode;
 }> = (props) => {
   return (
@@ -28,9 +29,20 @@ export const InfoFeatureHeader: React.FunctionComponent<{
         </Box>
       )}
       {props.subtitle && (
-        <Typography color="text.secondary" gutterBottom>
-          {props.subtitle}
-        </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            mb: 1,
+            color: "text.secondary",
+          }}
+        >
+          {props.subtitleIcon}
+          <Typography color="inherit" sx={{ mb: 0 }}>
+            {props.subtitle}
+          </Typography>
+        </Box>
       )}
     </>
   );

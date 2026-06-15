@@ -1,15 +1,19 @@
 import * as maplibregl from "maplibre-gl";
+import { OPENBIKEMAP_LINE_MIN_ZOOM } from "../constants/OpenBikeMapLayerZoom";
 import {
   IMBA_TRAIL_LINE_COLOR_EXPRESSION,
   MTB_TRAIL_LINE_COLOR_EXPRESSION,
   TRAIL_CASING_LINE_COLOR_EXPRESSION,
   TRAIL_IMBA_LINE_WIDTH_EXPRESSION,
+  TRAIL_STS_CENTER_LINE_COLOR,
 } from "../types/MtbTrailColors";
 import { ROUTE_NETWORK_LINE_COLOR_EXPRESSION } from "../types/RouteNetwork";
 
 const TRAIL_IMBA_LINE_LAYER_ID = "trails-imba";
-const TRAIL_DASHED_LINE_LAYER_IDS = new Set(["trails", "trails-imba"]);
-const MTB_TRAIL_DASHARRAY: [number, number] = [1, 2];
+/** Dashed IMBA lines only — STS uses solid double-line */
+const TRAIL_DASHED_LINE_LAYER_IDS = new Set([TRAIL_IMBA_LINE_LAYER_ID]);
+/** Path-like dashes — used on IMBA trails */
+const MTB_TRAIL_DASHARRAY: [number, number] = [1, 1.5];
 /** Retired layer — hide if present in cached tile styles */
 const LEGACY_IMBA_SYMBOL_LAYER_ID = "trails-imba-symbols";
 
@@ -30,7 +34,9 @@ const ROUTE_LINE_WIDTH: maplibregl.ExpressionSpecification = [
   "interpolate",
   ["linear"],
   ["zoom"],
-  8,
+  OPENBIKEMAP_LINE_MIN_ZOOM,
+  1.2,
+  10,
   2.2,
   14,
   4,
@@ -42,7 +48,9 @@ const ROUTE_CASING_LINE_WIDTH: maplibregl.ExpressionSpecification = [
   "interpolate",
   ["linear"],
   ["zoom"],
-  8,
+  OPENBIKEMAP_LINE_MIN_ZOOM,
+  2.5,
+  10,
   4.5,
   14,
   8,
@@ -50,38 +58,43 @@ const ROUTE_CASING_LINE_WIDTH: maplibregl.ExpressionSpecification = [
   9,
 ];
 
-const TRAIL_LINE_WIDTH: maplibregl.ExpressionSpecification = [
+const TRAIL_STS_CENTER_LINE_WIDTH: maplibregl.ExpressionSpecification = [
   "interpolate",
   ["linear"],
   ["zoom"],
-  8,
-  1.8,
+  OPENBIKEMAP_LINE_MIN_ZOOM,
+  0.8,
   10,
-  2.2,
+  1.2,
   14,
-  4,
+  2.5,
   16,
-  4.5,
+  3,
 ];
 
 const TRAIL_CASING_LINE_WIDTH: maplibregl.ExpressionSpecification = [
   "interpolate",
   ["linear"],
   ["zoom"],
-  8,
-  4,
+  OPENBIKEMAP_LINE_MIN_ZOOM,
+  2,
   10,
-  5,
+  3,
   14,
-  9,
+  6.5,
   16,
-  10,
+  7,
 ];
 
 const LABEL_TEXT_COLOR = "#212121";
 const LABEL_OUTLINE_COLOR = "#ffffff";
 const LABEL_OUTLINE_WIDTH = 1.75;
 const LABEL_STRIPE_HALO_WIDTH = 5;
+
+const TRAIL_DOUBLE_LINE_LAYOUT: maplibregl.LineLayerSpecification["layout"] = {
+  "line-cap": "round",
+  "line-join": "round",
+};
 
 function trailLineColor(): maplibregl.ExpressionSpecification {
   return JSON.parse(
@@ -194,15 +207,67 @@ function withLabelStyle(
   };
 }
 
+function withStsCenterLineStyle(
+  layer: maplibregl.LayerSpecification,
+): maplibregl.LayerSpecification {
+  if (layer.id !== TRAIL_CORE_LINE_LAYER_ID || layer.type !== "line") {
+    return layer;
+  }
+  const paint = { ...layer.paint } as Record<string, unknown>;
+  delete paint["line-dasharray"];
+  return {
+    ...layer,
+    layout: { ...layer.layout, ...TRAIL_DOUBLE_LINE_LAYOUT },
+    paint: {
+      ...paint,
+      "line-color": TRAIL_STS_CENTER_LINE_COLOR,
+      "line-width": TRAIL_STS_CENTER_LINE_WIDTH,
+    },
+  };
+}
+
+function withStsOuterLineStyle(
+  layer: maplibregl.LayerSpecification,
+): maplibregl.LayerSpecification {
+  if (layer.id !== TRAIL_CASING_LAYER_ID || layer.type !== "line") {
+    return layer;
+  }
+  const paint = { ...layer.paint } as Record<string, unknown>;
+  delete paint["line-dasharray"];
+  return {
+    ...layer,
+    layout: { ...layer.layout, ...TRAIL_DOUBLE_LINE_LAYOUT },
+    paint: {
+      ...paint,
+      "line-color": trailCasingLineColor(),
+      "line-width": TRAIL_CASING_LINE_WIDTH,
+      "line-opacity": LINE_CASING_OPACITY,
+    },
+  };
+}
+
+function mtbTrailDasharrayForLayer(
+  layerId: string,
+): number[] | null {
+  if (layerId === TRAIL_IMBA_LINE_LAYER_ID) {
+    return MTB_TRAIL_DASHARRAY;
+  }
+  return null;
+}
+
 function withTrailDash(
   layer: maplibregl.LayerSpecification,
 ): maplibregl.LayerSpecification {
-  if (layer.type !== "line" || !TRAIL_DASHED_LINE_LAYER_IDS.has(layer.id)) {
+  if (layer.type !== "line") {
+    return layer;
+  }
+  const dasharray = mtbTrailDasharrayForLayer(layer.id);
+  if (!dasharray) {
     return layer;
   }
   return {
     ...layer,
-    paint: { ...layer.paint, "line-dasharray": MTB_TRAIL_DASHARRAY },
+    paint: { ...layer.paint, "line-dasharray": dasharray },
   };
 }
 
@@ -235,17 +300,10 @@ function applyTrailPaintRules(
   const color = trailLineColor();
   let updated = withLabelStyle(
     withLabelStripeStyle(
-      withCasingStyle(
-        withCoreLineStyle(
+      withStsOuterLineStyle(
+        withStsCenterLineStyle(
           layer,
-          TRAIL_CORE_LINE_LAYER_ID,
-          color,
-          TRAIL_LINE_WIDTH,
         ),
-        TRAIL_CASING_LAYER_ID,
-        TRAIL_CASING_LINE_WIDTH,
-        trailCasingLineColor(),
-        true,
       ),
       TRAIL_LABEL_STRIPE_LAYER_ID,
       color,
@@ -333,7 +391,7 @@ function applyRoutePaintRulesToMap(map: maplibregl.Map): void {
   );
 }
 
-function clearSolidTrailCasingDasharray(
+function clearLineDasharray(
   map: maplibregl.Map,
   layerId: string,
 ): void {
@@ -346,6 +404,14 @@ function clearSolidTrailCasingDasharray(
   mapWithPaintRemoval.removePaintProperty(layerId, "line-dasharray");
 }
 
+function applyTrailDoubleLineLayout(map: maplibregl.Map, layerId: string): void {
+  if (!map.getLayer(layerId)) {
+    return;
+  }
+  map.setLayoutProperty(layerId, "line-cap", "round");
+  map.setLayoutProperty(layerId, "line-join", "round");
+}
+
 function applyTrailPaintRulesToMap(map: maplibregl.Map): void {
   const color = trailLineColor();
 
@@ -353,13 +419,23 @@ function applyTrailPaintRulesToMap(map: maplibregl.Map): void {
     map.setPaintProperty(TRAIL_CASING_LAYER_ID, "line-color", trailCasingLineColor());
     map.setPaintProperty(TRAIL_CASING_LAYER_ID, "line-width", TRAIL_CASING_LINE_WIDTH);
     map.setPaintProperty(TRAIL_CASING_LAYER_ID, "line-opacity", LINE_CASING_OPACITY);
-    clearSolidTrailCasingDasharray(map, TRAIL_CASING_LAYER_ID);
+    clearLineDasharray(map, TRAIL_CASING_LAYER_ID);
+    applyTrailDoubleLineLayout(map, TRAIL_CASING_LAYER_ID);
   }
 
   if (map.getLayer(TRAIL_CORE_LINE_LAYER_ID)) {
-    map.setPaintProperty(TRAIL_CORE_LINE_LAYER_ID, "line-color", color);
-    map.setPaintProperty(TRAIL_CORE_LINE_LAYER_ID, "line-width", TRAIL_LINE_WIDTH);
-    map.setPaintProperty(TRAIL_CORE_LINE_LAYER_ID, "line-dasharray", MTB_TRAIL_DASHARRAY);
+    map.setPaintProperty(
+      TRAIL_CORE_LINE_LAYER_ID,
+      "line-color",
+      TRAIL_STS_CENTER_LINE_COLOR,
+    );
+    map.setPaintProperty(
+      TRAIL_CORE_LINE_LAYER_ID,
+      "line-width",
+      TRAIL_STS_CENTER_LINE_WIDTH,
+    );
+    clearLineDasharray(map, TRAIL_CORE_LINE_LAYER_ID);
+    applyTrailDoubleLineLayout(map, TRAIL_CORE_LINE_LAYER_ID);
   }
 
   if (map.getLayer(TRAIL_IMBA_LINE_LAYER_ID)) {
@@ -389,7 +465,10 @@ export function applyPaintRulesToMap(map: maplibregl.Map): void {
     if (!map.getLayer(layerId)) {
       continue;
     }
-    map.setPaintProperty(layerId, "line-dasharray", MTB_TRAIL_DASHARRAY);
+    const dasharray = mtbTrailDasharrayForLayer(layerId);
+    if (dasharray) {
+      map.setPaintProperty(layerId, "line-dasharray", dasharray);
+    }
   }
 
   if (map.getLayer(LEGACY_IMBA_SYMBOL_LAYER_ID)) {

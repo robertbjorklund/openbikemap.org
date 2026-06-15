@@ -331,6 +331,15 @@ export default class StateReducer implements EventBus {
         idType,
         showInfo: true,
         feature: displayFeature,
+        pan:
+          options?.focusLngLat !== undefined &&
+          options.focusClickX !== undefined
+            ? {
+                animate: true,
+                lngLat: options.focusLngLat,
+                clickX: options.focusClickX,
+              }
+            : undefined,
       },
     });
 

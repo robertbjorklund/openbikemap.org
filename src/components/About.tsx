@@ -13,14 +13,16 @@ export const About: React.FunctionComponent<{ eventBus: EventBus }> = () => {
       <Typography component="ul" sx={{ pl: 2 }}>
         <li>
           MTB trails — off-road singletrack rated with Single Track Scale
-          (S0–S6) and/or IMBA difficulty (0–4). Trails are drawn as dashed
-          lines; the highest grades (S5, S6, IMBA 4) are highlighted in orange.
+          (S0–S6) and/or IMBA difficulty (0–4). STS is drawn as a solid
+          double line (coloured rails with a white centre, like Nordic ski
+          trails on OpenSkiMap). IMBA uses dashed lines on a light gray
+          backing. S6 and IMBA 4 are orange.
         </li>
         <li>
           Bicycle routes — signed long-distance cycling routes from local to
-          international level (LCN, RCN, NCN, EuroVelo/ICN), on asphalt and
-          gravel. Multi-stage routes can be browsed and downloaded stage by
-          stage.
+          international level (LCN, RCN, NCN, EuroVelo/ICN), drawn as solid
+          lines on asphalt and gravel. Multi-stage routes can be browsed and
+          downloaded stage by stage.
         </li>
       </Typography>
       <Typography paragraph sx={{ mt: 1 }}>

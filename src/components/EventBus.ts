@@ -30,6 +30,11 @@ export interface ShowInfoOptions {
 
   relatedFeatures?: MapFeature[];
 
+  /** Map click position — used to avoid covering the trail with the info panel. */
+  focusLngLat?: [number, number];
+
+  focusClickX?: number;
+
 }
 
 

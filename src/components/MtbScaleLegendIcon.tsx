@@ -7,7 +7,6 @@ import {
 import {
   MTB_TRAIL_COLOR_BLACK,
   MTB_TRAIL_COLOR_BLUE,
-  MTB_TRAIL_COLOR_GREEN,
   MTB_TRAIL_COLOR_ORANGE,
   MTB_TRAIL_COLOR_RED,
   TRAIL_COLOR_OTHER,
@@ -34,16 +33,6 @@ function IconFrame({
     >
       {children}
     </Box>
-  );
-}
-
-function GreenCircle({ size }: { size: number }) {
-  return (
-    <IconFrame size={size}>
-      <svg width={size} height={size} viewBox="0 0 18 18">
-        <circle cx="9" cy="9" r="6" fill={MTB_TRAIL_COLOR_GREEN} />
-      </svg>
-    </IconFrame>
   );
 }
 
@@ -114,15 +103,12 @@ export const MtbScaleLegendIcon: React.FunctionComponent<{
     return <PurpleCircle size={size} />;
   }
   if (scale <= 1) {
-    return <GreenCircle size={size} />;
-  }
-  if (scale === 2) {
     return <BlueSquare size={size} />;
   }
-  if (scale === 3) {
+  if (scale === 2) {
     return <RedTriangle size={size} />;
   }
-  if (scale === 4) {
+  if (scale <= 5) {
     return <BlackDiamond size={size} />;
   }
   return <OrangeDoubleDiamond size={size} />;

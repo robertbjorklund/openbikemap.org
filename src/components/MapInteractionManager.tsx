@@ -195,7 +195,12 @@ export class MapInteractionManager {
       }
 
       const relatedFeatures = findRelatedFeatures(this.map, mapFeature);
-      this.eventBus.showInfo(id, { clickedFeature: mapFeature, relatedFeatures });
+      this.eventBus.showInfo(id, {
+        clickedFeature: mapFeature,
+        relatedFeatures,
+        focusLngLat: [e.lngLat.lng, e.lngLat.lat],
+        focusClickX: e.point.x,
+      });
     },
     { atBegin: true },
   );
