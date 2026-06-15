@@ -1,6 +1,7 @@
 import type { LineString, MultiLineString, Position } from "geojson";
 import { AppConfig } from "../AppConfig";
 import type { MapFeature } from "../types/FeatureTypes";
+import { trackMatomoEvent } from "./matomo";
 
 function escapeXml(value: string): string {
   return value
@@ -76,4 +77,5 @@ export function downloadFeatureGpx(feature: MapFeature): void {
   anchor.click();
   document.body.removeChild(anchor);
   URL.revokeObjectURL(url);
+  trackMatomoEvent("Feature", "Download GPX", feature.properties.type);
 }

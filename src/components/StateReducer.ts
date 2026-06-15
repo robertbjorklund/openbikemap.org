@@ -1,6 +1,7 @@
 import { AppConfig } from "../AppConfig";
 import { MapMarker } from "../MapMarker";
 import { MapStyle } from "../MapStyle";
+import { trackMatomoEvent } from "../utils/matomo";
 import {
   BikeActivity,
   IMBA_SCALE_FILTERS,
@@ -129,6 +130,7 @@ export default class StateReducer implements EventBus {
   };
 
   setMapStyle = (style: MapStyle) => {
+    trackMatomoEvent("Map", "Basemap", style);
     this.update({ mapStyle: style });
   };
 
@@ -160,6 +162,11 @@ export default class StateReducer implements EventBus {
     }
 
     this.update({ mapFilters });
+    trackMatomoEvent(
+      "Filter",
+      activity,
+      enabling ? "show" : "hide",
+    );
   };
 
   toggleMtbStsGroup = () => {
@@ -342,6 +349,11 @@ export default class StateReducer implements EventBus {
             : undefined,
       },
     });
+
+    const featureKind =
+      clickedFeature?.properties.type ??
+      (idType === "openstreetmap" ? "unknown" : "feature");
+    trackMatomoEvent("Feature", "View", featureKind);
 
     this.loadInfoData(id, idType, relatedFeatures, clickedFeature);
   };

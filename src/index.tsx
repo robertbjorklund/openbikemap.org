@@ -8,9 +8,12 @@ import { getURLState, updateURL } from "./components/URLHistory";
 import "./index.css";
 import { applyUiTheme } from "./uiTheme";
 import { CameraPositionManager } from "./utils/CameraPositionManager";
+import { initMatomo, trackAppPageView } from "./utils/matomo";
 
 function initialize() {
   applyUiTheme();
+  initMatomo();
+  trackAppPageView();
   const store = new StateReducer(getInitialState(), update);
 
   window.addEventListener("popstate", () => {
@@ -75,6 +78,16 @@ function initialize() {
 
     if (changes.latestMarker !== undefined) {
       map.flyTo(changes.latestMarker.coordinates);
+    }
+
+    if (changes.selectedObject !== undefined) {
+      trackAppPageView();
+    } else if (
+      changes.sidePanelView !== undefined &&
+      (state.sidePanelView === "about" ||
+        changes.sidePanelView === "about")
+    ) {
+      trackAppPageView();
     }
   }
 

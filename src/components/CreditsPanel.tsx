@@ -61,6 +61,25 @@ export const CreditsPanel: React.FunctionComponent<{
       </Typography>
 
       <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
+        Inspiration
+      </Typography>
+      <Typography paragraph sx={{ mb: 2 }}>
+        UI architecture inspired by{" "}
+        <Link href="https://openskimap.org/" target="_blank" rel="noreferrer">
+          OpenSkiMap.org
+        </Link>{" "}
+        by{" "}
+        <Link
+          href="https://github.com/russellporter/openskimap.org"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Russell Porter
+        </Link>
+        .
+      </Typography>
+
+      <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
         Satellite imagery
       </Typography>
       <Typography paragraph>

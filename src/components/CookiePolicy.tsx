@@ -1,6 +1,7 @@
 import { Link, Typography } from "@mui/material";
 import * as React from "react";
 import { AppConfig } from "../AppConfig";
+import { isMatomoConfigured } from "../config/MatomoConfig";
 
 export const CookiePolicy: React.FunctionComponent = () => {
   return (
@@ -39,8 +40,10 @@ export const CookiePolicy: React.FunctionComponent = () => {
         To show MTB trails and bicycle routes, search, and feature details, the
         app sends requests to {AppConfig.appName} services (API and vector
         tiles). Those requests may be logged on our servers in the usual way for
-        operating a web service, but we do not use first-party analytics or
-        advertising cookies.
+        operating a web service.
+        {!isMatomoConfigured && (
+          <> We do not use first-party analytics or advertising cookies.</>
+        )}
       </Typography>
 
       <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
@@ -84,10 +87,24 @@ export const CookiePolicy: React.FunctionComponent = () => {
       <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
         Analytics and advertising
       </Typography>
-      <Typography paragraph>
-        {AppConfig.appName} does not use first-party analytics or advertising
-        cookies.
-      </Typography>
+      {isMatomoConfigured ? (
+        <Typography paragraph>
+          We use a self-hosted{" "}
+          <Link href="https://matomo.org/" target="_blank" rel="noreferrer">
+            Matomo
+          </Link>{" "}
+          instance to understand how the map is used (for example page views,
+          selected trails or routes, search, basemap choice, and GPX downloads).
+          Matomo may store a first-party cookie and a pseudonymous visitor ID.
+          IP addresses are anonymized and Do Not Track is respected where
+          supported. We do not use third-party advertising cookies.
+        </Typography>
+      ) : (
+        <Typography paragraph>
+          {AppConfig.appName} does not use first-party analytics or advertising
+          cookies.
+        </Typography>
+      )}
 
       <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
         Contact

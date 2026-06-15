@@ -1,6 +1,6 @@
 # OpenBikeMap.org
 
-Interactive map focused on bicycle trails and cycling infrastructure, inspired by [OpenSkiMap.org](https://openskimap.org).
+Interactive map focused on bicycle trails and cycling infrastructure, inspired by [OpenSkiMap.org](https://openskimap.org) by [Russell Porter](https://github.com/russellporter/openskimap.org).
 
 ## Architecture
 
@@ -60,6 +60,8 @@ The map loads `http://localhost:8083/styles/terrain/style.json` with Stockholm t
 | `VITE_API_BASE_URL` | `https://api.openbikemap.org` | REST API base URL |
 | `VITE_TILES_BASE_URL` | `https://tiles.openbikemap.org` | Tile server base URL |
 | `VITE_TILES_STYLE_PATH` | `/styles/terrain/style.json` | MapLibre style path on tileserver-gl |
+| `VITE_MATOMO_URL` | _(unset)_ | Self-hosted Matomo base URL (omit to disable analytics) |
+| `VITE_MATOMO_SITE_ID` | _(unset)_ | Matomo site ID for this property |
 
 ## License
 

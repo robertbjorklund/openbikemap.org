@@ -19,6 +19,7 @@ import {
   type MapFeature,
 } from "../types/FeatureTypes";
 import EventBus from "./EventBus";
+import { trackMatomoEvent } from "../utils/matomo";
 
 type CommandResult = { type: "add_marker"; data: MapMarker };
 type LocationResult = { type: "location"; data: MapFeature };
@@ -129,10 +130,12 @@ export const SearchBox: React.FunctionComponent<{
     props.onClose();
 
     if (result.type === "add_marker") {
+      trackMatomoEvent("Search", "Select", "coordinates");
       props.eventBus.addMarker(result.data);
       return;
     }
 
+    trackMatomoEvent("Search", "Select", result.data.properties.type);
     props.eventBus.showInfo(result.data.properties.id, {
       clickedFeature: result.data,
     });

@@ -6,6 +6,8 @@ interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
   readonly VITE_TILES_BASE_URL?: string;
   readonly VITE_TILES_STYLE_PATH?: string;
+  readonly VITE_MATOMO_URL?: string;
+  readonly VITE_MATOMO_SITE_ID?: string;
 }
 
 interface ImportMeta {
