@@ -41,8 +41,8 @@ export function applyUiTheme(): void {
     AppConfig.accentColor,
   );
   document.documentElement.style.setProperty(
-    "--app-primary-soft",
-    AppConfig.primarySoftColor,
+    "--beta-banner-bg",
+    AppConfig.betaBannerBackground,
   );
 }
 

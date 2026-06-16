@@ -1,6 +1,7 @@
 import type { LineString, MultiLineString, Position } from "geojson";
 import { AppConfig } from "../AppConfig";
 import type { MapFeature } from "../types/FeatureTypes";
+import { getDefaultFeatureTitle } from "./MapFeatureKind";
 import { trackMatomoEvent } from "./matomo";
 
 function escapeXml(value: string): string {
@@ -18,6 +19,11 @@ function sanitizeFilename(name: string): string {
 }
 
 function getFeatureTitle(feature: MapFeature): string {
+  const { properties } = feature;
+  return properties.name || properties.ref || getDefaultFeatureTitle(feature);
+}
+
+function getFeatureExportBasename(feature: MapFeature): string {
   const { properties } = feature;
   return properties.name || properties.ref || properties.id;
 }
@@ -67,7 +73,7 @@ export function downloadFeatureGpx(feature: MapFeature): void {
   }
 
   const gpxContent = featureToGpx(feature);
-  const filename = `${sanitizeFilename(getFeatureTitle(feature))}.gpx`;
+  const filename = `${sanitizeFilename(getFeatureExportBasename(feature))}.gpx`;
   const blob = new Blob([gpxContent], { type: "application/gpx+xml" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");

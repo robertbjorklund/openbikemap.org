@@ -12,22 +12,28 @@ export const About: React.FunctionComponent<{ eventBus: EventBus }> = () => {
       </Typography>
       <Typography component="ul" sx={{ pl: 2 }}>
         <li>
-          MTB trails — off-road singletrack rated with Single Track Scale
-          (S0–S6) and/or IMBA difficulty (0–4). STS is drawn as a solid
-          double line (coloured rails with a white centre, like Nordic ski
-          trails on OpenSkiMap). IMBA uses dashed lines on a light gray
-          backing. S6 and IMBA 4 are orange.
+          <strong>{AppConfig.layerFilters.mtbTrail.panelTitle}</strong> — off-road
+          singletrack rated with Single Track Scale (S0–S6). Drawn as a solid
+          double line (coloured rails with a white centre, like Nordic ski trails
+          on OpenSkiMap).
         </li>
         <li>
-          Bicycle routes — signed long-distance cycling routes from local to
-          international level (LCN, RCN, NCN, EuroVelo/ICN), drawn as solid
-          lines on asphalt and gravel. Multi-stage routes can be browsed and
-          downloaded stage by stage.
+          <strong>{AppConfig.layerFilters.mtbBikePark.panelTitle}</strong> — bike
+          park and flow trails rated with IMBA difficulty (0–4). Drawn as dashed
+          lines on a light gray backing. IMBA 4 is orange.
+        </li>
+        <li>
+          <strong>{AppConfig.layerFilters.routes.panelTitle}</strong> — signed
+          long-distance cycling routes from local to international level (LCN,
+          RCN, NCN, EuroVelo/ICN), drawn as solid lines on asphalt and gravel.
+          Multi-stage routes can be browsed and downloaded stage by stage.
         </li>
       </Typography>
       <Typography paragraph sx={{ mt: 1 }}>
-        Use the MTB and Bicycle routes buttons in the side panel to show, hide,
-        or filter each layer by difficulty or route network.
+        Use the {AppConfig.layerFilters.mtbTrail.railLabel},{" "}
+        {AppConfig.layerFilters.mtbBikePark.railLabel}, and{" "}
+        {AppConfig.layerFilters.routes.railLabel} buttons in the side panel to
+        show, hide, or filter each layer by difficulty or route network.
       </Typography>
       <Typography paragraph sx={{ mt: 2 }}>
         Urban cycle paths and footways are intentionally excluded. The terrain

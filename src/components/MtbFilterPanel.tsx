@@ -4,20 +4,23 @@ import MapFilters from "../MapFilters";
 import EventBus from "./EventBus";
 import { MtbFilterContent } from "./MtbFilterContent";
 import { PanelShell } from "./PanelShell";
+import { AppConfig } from "../AppConfig";
 
 export const MtbFilterPanel: React.FunctionComponent<{
   eventBus: EventBus;
   mapFilters: MapFilters;
 }> = (props) => {
+  const { panelTitle, showSwitchAriaLabel } = AppConfig.layerFilters.mtbTrail;
+
   return (
     <PanelShell
-      title="STS"
+      title={panelTitle}
       subtitle="Single Track Scale — European off-road trail difficulty (S0–S6)."
       actions={
         <Switch
           checked={props.mapFilters.showMtbSts}
           onChange={() => props.eventBus.toggleMtbStsGroup()}
-          inputProps={{ "aria-label": "Show STS trails on map" }}
+          inputProps={{ "aria-label": showSwitchAriaLabel }}
         />
       }
       onClose={() => props.eventBus.closeMenu()}

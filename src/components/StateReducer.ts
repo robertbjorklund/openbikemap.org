@@ -215,6 +215,42 @@ export default class StateReducer implements EventBus {
     });
   };
 
+  showAllMtbScales = () => {
+    this.update({
+      mapFilters: {
+        ...this._state.mapFilters,
+        hiddenMtbScales: [],
+      },
+    });
+  };
+
+  hideAllMtbScales = () => {
+    this.update({
+      mapFilters: {
+        ...this._state.mapFilters,
+        hiddenMtbScales: [...MTB_SCALE_FILTERS],
+      },
+    });
+  };
+
+  showAllMtbImbaScales = () => {
+    this.update({
+      mapFilters: {
+        ...this._state.mapFilters,
+        hiddenMtbImbaScales: [],
+      },
+    });
+  };
+
+  hideAllMtbImbaScales = () => {
+    this.update({
+      mapFilters: {
+        ...this._state.mapFilters,
+        hiddenMtbImbaScales: [...IMBA_SCALE_FILTERS],
+      },
+    });
+  };
+
   toggleRoutesGroup = () => {
     this.update({
       mapFilters: {
@@ -234,6 +270,24 @@ export default class StateReducer implements EventBus {
       mapFilters: {
         ...this._state.mapFilters,
         hiddenRouteNetworks,
+      },
+    });
+  };
+
+  showAllRouteNetworks = () => {
+    this.update({
+      mapFilters: {
+        ...this._state.mapFilters,
+        hiddenRouteNetworks: [],
+      },
+    });
+  };
+
+  hideAllRouteNetworks = () => {
+    this.update({
+      mapFilters: {
+        ...this._state.mapFilters,
+        hiddenRouteNetworks: [...ROUTE_NETWORK_FILTERS],
       },
     });
   };

@@ -15,6 +15,7 @@ import {
 } from "../types/RouteNetwork";
 import EventBus from "./EventBus";
 import { dimmedFilterControlSx } from "./FilterControlStyles";
+import { FilterBulkActions } from "./FilterBulkActions";
 import { RouteNetworkLegendIcon } from "./RouteNetworkLegendIcon";
 
 function routeNetworkLabel(network: RouteNetworkFilter): string {
@@ -33,12 +34,23 @@ export const RoutesFilterContent: React.FunctionComponent<{
   mapFilters: MapFilters;
 }> = (props) => {
   const groupEnabled = props.mapFilters.showRoutes;
+  const { hiddenRouteNetworks } = props.mapFilters;
 
   return (
     <>
       <Typography variant="subtitle2" sx={{ fontWeight: 600, pb: 0.5 }}>
         Route network
       </Typography>
+
+      <FilterBulkActions
+        disabled={!groupEnabled}
+        allSelected={hiddenRouteNetworks.length === 0}
+        noneSelected={
+          hiddenRouteNetworks.length === ROUTE_NETWORK_FILTERS.length
+        }
+        onSelectAll={() => props.eventBus.showAllRouteNetworks()}
+        onClearAll={() => props.eventBus.hideAllRouteNetworks()}
+      />
 
       <FormGroup>
         {ROUTE_NETWORK_FILTERS.map((network) => (

@@ -18,7 +18,7 @@ export const BIKE_ACTIVITY_LABELS: Record<BikeActivity, string> = {
 
   [BikeActivity.Mtb]: "MTB",
 
-  [BikeActivity.Routes]: "Bicycle routes",
+  [BikeActivity.Routes]: "Routes",
 
 };
 

@@ -13,11 +13,9 @@ import * as React from "react";
 import { debounce, throttle } from "throttle-debounce";
 import { API_BASE_URL } from "../Config";
 import { MapMarker } from "../MapMarker";
-import {
-  FeatureType,
-  TRAIL_CATEGORY_LABELS,
-  type MapFeature,
-} from "../types/FeatureTypes";
+import { AppConfig } from "../AppConfig";
+import { FeatureType, TRAIL_CATEGORY_LABELS, type MapFeature } from "../types/FeatureTypes";
+import { getDefaultFeatureTitle } from "../utils/MapFeatureKind";
 import EventBus from "./EventBus";
 import { trackMatomoEvent } from "../utils/matomo";
 
@@ -215,7 +213,7 @@ function primaryText(result: SearchResult): string {
     return "Mark location";
   }
   const { properties } = result.data;
-  return properties.name || properties.ref || "Unnamed feature";
+  return properties.name || properties.ref || getDefaultFeatureTitle(result.data);
 }
 
 function secondaryText(result: SearchResult): string {
@@ -228,7 +226,7 @@ function secondaryText(result: SearchResult): string {
 
   const { properties } = result.data;
   if (properties.type === FeatureType.Route) {
-    return "Bicycle route";
+    return AppConfig.layerFilters.routes.featureLabel;
   }
   return TRAIL_CATEGORY_LABELS[properties.category];
 }

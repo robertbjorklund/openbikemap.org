@@ -24,7 +24,7 @@ import {
 
 } from "../types/FeatureTypes";
 
-import { getMapFeatureKind } from "../utils/MapFeatureKind";
+import { getDefaultFeatureTitle, getMapFeatureKind } from "../utils/MapFeatureKind";
 import { getSegmentCount } from "../utils/FeatureGroup";
 import { formatLength, getFeatureLengthMeters } from "../utils/Length";
 import { CardHeader } from "./CardHeader";
@@ -91,13 +91,14 @@ function TrailInfoBody({
     ? "IMBA — International Mountain Bicycling Association"
     : "STS — Single Track Scale";
 
-  const title = properties.name || properties.ref || ratingSystemLabel;
+  const featureKind = getMapFeatureKind(feature);
+  const title =
+    properties.name || properties.ref || getDefaultFeatureTitle(feature);
 
   const length = formatLength(getFeatureLengthMeters(feature), unitSystem);
 
   const segmentCount = getSegmentCount(feature);
 
-  const featureKind = getMapFeatureKind(feature);
   const subtitle = featureKind.label;
   const subtitleIcon = (
     <MapFeatureKindRailIcon kind={featureKind.kind} size={22} />

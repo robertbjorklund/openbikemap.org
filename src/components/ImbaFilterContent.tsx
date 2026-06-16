@@ -12,6 +12,7 @@ import {
 } from "../types/BikeActivity";
 import EventBus from "./EventBus";
 import { dimmedFilterControlSx } from "./FilterControlStyles";
+import { FilterBulkActions } from "./FilterBulkActions";
 import { MtbImbaLegendIcon } from "./MtbImbaLegendIcon";
 
 export const ImbaFilterContent: React.FunctionComponent<{
@@ -19,9 +20,18 @@ export const ImbaFilterContent: React.FunctionComponent<{
   mapFilters: MapFilters;
 }> = (props) => {
   const groupEnabled = props.mapFilters.showMtbImba;
+  const { hiddenMtbImbaScales } = props.mapFilters;
 
   return (
-    <FormGroup>
+    <>
+      <FilterBulkActions
+        disabled={!groupEnabled}
+        allSelected={hiddenMtbImbaScales.length === 0}
+        noneSelected={hiddenMtbImbaScales.length === IMBA_SCALE_FILTERS.length}
+        onSelectAll={() => props.eventBus.showAllMtbImbaScales()}
+        onClearAll={() => props.eventBus.hideAllMtbImbaScales()}
+      />
+      <FormGroup>
       {IMBA_SCALE_FILTERS.map((scale) => (
         <FormControlLabel
           key={`imba-${scale}`}
@@ -44,5 +54,6 @@ export const ImbaFilterContent: React.FunctionComponent<{
         />
       ))}
     </FormGroup>
+    </>
   );
 };

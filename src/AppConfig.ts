@@ -38,6 +38,9 @@ export const AppConfig = {
 
   defaultObjectIdType: "openbikemap" as const,
 
+  /** Shown when a feature has no name or ref in OpenStreetMap. */
+  untitledFeatureTitle: "Untitled",
+
   apiBaseUrl:
 
     import.meta.env.VITE_API_BASE_URL ?? "https://api.openbikemap.org",
@@ -45,6 +48,36 @@ export const AppConfig = {
   tilesBaseUrl:
 
     import.meta.env.VITE_TILES_BASE_URL ?? "https://tiles.openbikemap.org",
+
+  /** Preview banner + feedback (set VITE_BETA_BANNER=false to hide). */
+  showBetaBanner: import.meta.env.VITE_BETA_BANNER !== "false",
+
+  feedbackGithubRepo: "https://github.com/robertbjorklund/openbikemap.org",
+
+  /** Contrasts with teal brand — beta banner and feedback CTA. */
+  betaAccentColor: "#E91E63",
+
+  betaBannerBackground: "#1E2A32",
+
+  /** User-facing map layer filter names (panels, rail, feature headers). */
+  layerFilters: {
+    mtbTrail: {
+      panelTitle: "MTB — Trail",
+      railLabel: "Trail",
+      showSwitchAriaLabel: "Show trail MTB on map",
+    },
+    mtbBikePark: {
+      panelTitle: "MTB — Bike park",
+      railLabel: "Bike park",
+      showSwitchAriaLabel: "Show bike park MTB on map",
+    },
+    routes: {
+      panelTitle: "Routes",
+      railLabel: "Routes",
+      featureLabel: "Route",
+      showSwitchAriaLabel: "Show signed routes on map",
+    },
+  },
 
 } as const;
 

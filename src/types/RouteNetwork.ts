@@ -4,6 +4,7 @@ import {
   isEuroVeloRoute,
   parseEuroVeloRouteNumber,
 } from "./EuroVelo";
+import { AppConfig } from "../AppConfig";
 
 /** OSM bicycle route network tags on relation routes (routes MVT layer). */
 export enum RouteNetwork {
@@ -130,7 +131,7 @@ export function formatRouteDisplayTitle(
     return trimmedRef;
   }
 
-  return "Bicycle route";
+  return AppConfig.untitledFeatureTitle;
 }
 
 /** MapLibre expression for route line color from OSM network tag */

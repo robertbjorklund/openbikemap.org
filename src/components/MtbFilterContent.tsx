@@ -12,6 +12,7 @@ import {
 } from "../types/BikeActivity";
 import EventBus from "./EventBus";
 import { dimmedFilterControlSx } from "./FilterControlStyles";
+import { FilterBulkActions } from "./FilterBulkActions";
 import { MtbScaleLegendIcon } from "./MtbScaleLegendIcon";
 
 export const MtbFilterContent: React.FunctionComponent<{
@@ -19,9 +20,18 @@ export const MtbFilterContent: React.FunctionComponent<{
   mapFilters: MapFilters;
 }> = (props) => {
   const groupEnabled = props.mapFilters.showMtbSts;
+  const { hiddenMtbScales } = props.mapFilters;
 
   return (
-    <FormGroup>
+    <>
+      <FilterBulkActions
+        disabled={!groupEnabled}
+        allSelected={hiddenMtbScales.length === 0}
+        noneSelected={hiddenMtbScales.length === MTB_SCALE_FILTERS.length}
+        onSelectAll={() => props.eventBus.showAllMtbScales()}
+        onClearAll={() => props.eventBus.hideAllMtbScales()}
+      />
+      <FormGroup>
       {MTB_SCALE_FILTERS.map((scale) => (
         <FormControlLabel
           key={scale}
@@ -44,5 +54,6 @@ export const MtbFilterContent: React.FunctionComponent<{
         />
       ))}
     </FormGroup>
+    </>
   );
 };

@@ -1,11 +1,12 @@
+import { AppConfig } from "../AppConfig";
 import { FeatureType, type MapFeature, type TrailFeature } from "../types/FeatureTypes";
 
 export type MapFeatureKind = "bicycle-route" | "sts" | "imba";
 
 export const MAP_FEATURE_KIND_LABELS: Record<MapFeatureKind, string> = {
-  "bicycle-route": "Bicycle route",
-  sts: "STS",
-  imba: "IMBA",
+  "bicycle-route": AppConfig.layerFilters.routes.featureLabel,
+  sts: AppConfig.layerFilters.mtbTrail.railLabel,
+  imba: AppConfig.layerFilters.mtbBikePark.railLabel,
 };
 
 export function getMapFeatureKind(
@@ -24,4 +25,8 @@ export function getMapFeatureKind(
   }
 
   return { kind: "sts", label: MAP_FEATURE_KIND_LABELS.sts };
+}
+
+export function getDefaultFeatureTitle(_feature?: MapFeature): string {
+  return AppConfig.untitledFeatureTitle;
 }

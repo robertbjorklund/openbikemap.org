@@ -1,7 +1,10 @@
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import * as ReactDOM from "react-dom/client";
 import { AppConfig } from "./AppConfig";
+import { BetaBanner } from "./components/BetaBanner";
 import { Map } from "./components/Map";
+import { Themed } from "./components/Themed";
 import State, { getInitialState, StateChanges } from "./components/State";
 import StateReducer from "./components/StateReducer";
 import { getURLState, updateURL } from "./components/URLHistory";
@@ -14,6 +17,18 @@ function initialize() {
   applyUiTheme();
   initMatomo();
   trackAppPageView();
+
+  if (AppConfig.showBetaBanner) {
+    const bannerRoot = document.getElementById("beta-banner-root");
+    if (bannerRoot) {
+      ReactDOM.createRoot(bannerRoot).render(
+        <Themed>
+          <BetaBanner />
+        </Themed>,
+      );
+    }
+  }
+
   const store = new StateReducer(getInitialState(), update);
 
   window.addEventListener("popstate", () => {

@@ -6,6 +6,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import CookieIcon from "@mui/icons-material/Cookie";
 import { Divider, IconButton } from "@mui/material";
 import * as React from "react";
+import { AppConfig } from "../AppConfig";
 import { AboutRailIcon } from "./icons/AboutRailIcon";
 import { BicycleRouteRailIcon } from "./icons/BicycleRouteRailIcon";
 import { StsRailIcon } from "./icons/StsRailIcon";
@@ -33,6 +34,7 @@ export const SidePanelRail: React.FunctionComponent<{
   onOpenAbout: () => void;
   onOpenCookiePolicy: () => void;
 }> = (props) => {
+  const { mtbTrail, mtbBikePark, routes } = AppConfig.layerFilters;
   const isActive = (view: SidePanelNavView) =>
     props.open && props.activeView === view;
 
@@ -53,9 +55,9 @@ export const SidePanelRail: React.FunctionComponent<{
 
         <IconButton
           className={railButtonClass(isActive("routesFilter"))}
-          aria-label="Bicycle routes filter"
+          aria-label={`${routes.railLabel} filter`}
           aria-pressed={isActive("routesFilter")}
-          title="Bicycle routes"
+          title={routes.railLabel}
           onClick={props.onOpenRoutesFilter}
         >
           <BicycleRouteRailIcon />
@@ -63,9 +65,9 @@ export const SidePanelRail: React.FunctionComponent<{
 
         <IconButton
           className={railButtonClass(isActive("mtbFilter"))}
-          aria-label="STS filter"
+          aria-label={`${mtbTrail.railLabel} filter`}
           aria-pressed={isActive("mtbFilter")}
-          title="STS"
+          title={mtbTrail.railLabel}
           onClick={props.onOpenMtbFilter}
         >
           <StsRailIcon />
@@ -73,9 +75,9 @@ export const SidePanelRail: React.FunctionComponent<{
 
         <IconButton
           className={railButtonClass(isActive("imbaFilter"))}
-          aria-label="IMBA filter"
+          aria-label={`${mtbBikePark.railLabel} filter`}
           aria-pressed={isActive("imbaFilter")}
-          title="IMBA"
+          title={mtbBikePark.railLabel}
           onClick={props.onOpenImbaFilter}
         >
           <ImbaRailIcon />

@@ -85,9 +85,21 @@ export default interface EventBus {
 
   toggleMtbImbaScale(scale: MtbImbaScaleFilter): void;
 
+  showAllMtbScales(): void;
+
+  hideAllMtbScales(): void;
+
+  showAllMtbImbaScales(): void;
+
+  hideAllMtbImbaScales(): void;
+
   toggleRoutesGroup(): void;
 
   toggleRouteNetwork(network: RouteNetworkFilter): void;
+
+  showAllRouteNetworks(): void;
+
+  hideAllRouteNetworks(): void;
 
   showInfo(id: string, options?: ShowInfoOptions): void;
 
