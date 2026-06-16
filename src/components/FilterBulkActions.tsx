@@ -1,40 +1,54 @@
-import { Box, Button } from "@mui/material";
+import { Checkbox, FormControlLabel } from "@mui/material";
 import * as React from "react";
+import { dimmedFilterControlSx } from "./FilterControlStyles";
 
+/**
+ * Master checkbox for filter lists — checked = all, indeterminate = partial,
+ * click toggles between all selected and none.
+ */
 export const FilterBulkActions: React.FunctionComponent<{
   disabled?: boolean;
   allSelected: boolean;
   noneSelected: boolean;
   onSelectAll: () => void;
   onClearAll: () => void;
+  label?: string;
 }> = (props) => {
+  const label = props.label ?? "Select all";
+
+  const handleChange = () => {
+    if (props.allSelected) {
+      props.onClearAll();
+    } else {
+      props.onSelectAll();
+    }
+  };
+
   return (
-    <Box
+    <FormControlLabel
       sx={{
+        ...dimmedFilterControlSx(!props.disabled),
         display: "flex",
-        gap: 0.5,
-        mb: 1.5,
-        alignItems: "center",
+        mb: 0.5,
+        ml: 0,
+        borderBottom: 1,
+        borderColor: "divider",
+        pb: 0.5,
+        "& .MuiFormControlLabel-label": {
+          fontWeight: 600,
+          fontSize: "0.875rem",
+        },
       }}
-    >
-      <Button
-        size="small"
-        variant="text"
-        disabled={props.disabled || props.allSelected}
-        onClick={props.onSelectAll}
-        sx={{ minWidth: 0, px: 1, textTransform: "none" }}
-      >
-        Select all
-      </Button>
-      <Button
-        size="small"
-        variant="text"
-        disabled={props.disabled || props.noneSelected}
-        onClick={props.onClearAll}
-        sx={{ minWidth: 0, px: 1, textTransform: "none" }}
-      >
-        Clear all
-      </Button>
-    </Box>
+      control={
+        <Checkbox
+          size="small"
+          checked={props.allSelected}
+          indeterminate={!props.allSelected && !props.noneSelected}
+          disabled={props.disabled}
+          onChange={handleChange}
+        />
+      }
+      label={label}
+    />
   );
 };

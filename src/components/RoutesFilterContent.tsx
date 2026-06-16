@@ -38,10 +38,6 @@ export const RoutesFilterContent: React.FunctionComponent<{
 
   return (
     <>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, pb: 0.5 }}>
-        Route network
-      </Typography>
-
       <FilterBulkActions
         disabled={!groupEnabled}
         allSelected={hiddenRouteNetworks.length === 0}
