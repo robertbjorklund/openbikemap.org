@@ -29,6 +29,7 @@ import {
 import { MapInteractionManager } from "./MapInteractionManager";
 import { EsriAttribution } from "./EsriAttribution";
 import { FilterControl } from "./FilterControl";
+import { LegendControl } from "./LegendControl";
 import { LogoControl } from "./LogoControl";
 import { MapNavigationControl } from "./MapNavigationControl";
 import { StyledGeolocateControl } from "./StyledGeolocateControl";
@@ -188,6 +189,7 @@ export class Map {
   private cameraPositionManager: CameraPositionManager;
   private sidePanelControl: SidePanelControl;
   private filterControl: FilterControl;
+  private legendControl: LegendControl;
   private attributionControl: maplibregl.AttributionControl;
   private mapScaleControl: maplibregl.ScaleControl;
   private selectedFeature: MapFeature | null = null;
@@ -241,6 +243,11 @@ export class Map {
 
     this.filterControl = new FilterControl(eventBus, MapStyle.Terrain);
     this.map.addControl(this.filterControl, "bottom-left");
+
+    this.legendControl = new LegendControl();
+    this.map.addControl(this.legendControl, "bottom-left");
+    this.legendControl.setPeerMenuClose(() => this.filterControl.closeMenu());
+    this.filterControl.setPeerMenuClose(() => this.legendControl.closePanel());
 
     addUnitSystemChangeListener_NonReactive({
       onUnitSystemChange: (unitSystem) => {
@@ -357,6 +364,7 @@ export class Map {
   private setFiltersUnthrottled = (filters: MapFilters) => {
     this.currentFilters = filters;
     this.sidePanelControl.updateMapFilters(filters);
+    this.legendControl.setMapFilters(filters);
 
     if (this.map.isStyleLoaded()) {
       this.applyFiltersToLiveMap();

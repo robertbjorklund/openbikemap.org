@@ -158,68 +158,109 @@ body {
   margin: 0;
 }
 
-.openbikemap-layers-control {
+/* Shared bottom-left map menu toggles (legend, layers). */
+.openbikemap-map-corner-control {
   position: relative;
-  margin: 0 0 10px 10px;
+  margin: 0 0 6px 10px;
 }
 
-.openbikemap-layers-toggle {
-  position: relative;
-  display: block;
-  width: 72px;
-  height: 72px;
-  padding: 0;
-  border: 2px solid #fff;
+.openbikemap-map-menu-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: var(--openbikemap-map-menu-toggle-width, 120px);
+  height: 36px;
+  padding: 0 8px;
+  border: none;
   border-radius: 8px;
-  overflow: hidden;
+  background: #fff;
+  color: #333;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
   transition: box-shadow 0.15s ease;
 }
 
-.openbikemap-layers-toggle:hover {
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.34);
+.openbikemap-map-menu-toggle:hover {
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.22);
 }
 
-.openbikemap-layers-control-open .openbikemap-layers-toggle {
+.openbikemap-map-corner-control-open .openbikemap-map-menu-toggle {
   box-shadow:
     0 0 0 2px var(--app-primary, #007b8b),
-    0 3px 12px rgba(0, 0, 0, 0.34);
+    0 3px 12px rgba(0, 0, 0, 0.22);
 }
 
-.openbikemap-layers-preview {
-  position: absolute;
-  inset: 0;
+.openbikemap-map-menu-toggle-thumb {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
-.openbikemap-layers-label {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  padding: 14px 6px 5px;
-  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.72) 100%);
-  color: #fff;
-  font-family: system-ui, sans-serif;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.2;
-  text-align: left;
-}
-
-.openbikemap-layers-badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
+.openbikemap-map-menu-toggle-icon {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 22px;
   height: 22px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.92);
-  color: #333;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  color: #444;
+}
+
+.openbikemap-map-menu-toggle-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.openbikemap-map-menu-toggle-chevron {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #666;
+  transition: transform 0.15s ease;
+}
+
+.openbikemap-map-corner-control-open .openbikemap-map-menu-toggle-chevron {
+  transform: rotate(180deg);
+}
+
+.openbikemap-legend-panel {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 2;
+  width: min(240px, calc(100vw - var(--side-panel-rail-width, 80px) - 24px));
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+}
+
+.openbikemap-legend-panel-inner {
+  padding: 12px 12px 14px;
+}
+
+.openbikemap-legend-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.openbikemap-legend-rows {
+  list-style: none;
+}
+
+.openbikemap-legend-row + .openbikemap-legend-row {
+  margin-top: 8px;
 }
 
 .openbikemap-layers-menu {
@@ -233,6 +274,20 @@ body {
   border-radius: 8px;
   background: #fff;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+}
+
+@media (max-width: 480px) {
+  .openbikemap-map-menu-toggle {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .openbikemap-map-menu-toggle-label,
+  .openbikemap-map-menu-toggle-chevron {
+    display: none;
+  }
 }
 
 .openbikemap-filter-menu-inner {

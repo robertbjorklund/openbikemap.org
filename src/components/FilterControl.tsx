@@ -6,12 +6,6 @@ import EventBus from "./EventBus";
 import { MapFilterMenu } from "./MapFilterMenu";
 import { Themed } from "./Themed";
 
-const LAYERS_BADGE_ICON = `
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-    <path d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16zm0-11.47L17.74 9 12 13.47 6.26 9 12 4.53z"/>
-  </svg>
-`;
-
 export class FilterControl implements maplibregl.IControl {
   private container: HTMLDivElement;
   private menu: HTMLDivElement;
@@ -21,6 +15,7 @@ export class FilterControl implements maplibregl.IControl {
   private labelEl: HTMLSpanElement;
   private menuOpen = false;
   private mapStyle: MapStyle;
+  private peerMenuClose: (() => void) | null = null;
 
   constructor(
     private eventBus: EventBus,
@@ -30,7 +25,7 @@ export class FilterControl implements maplibregl.IControl {
 
     this.container = document.createElement("div");
     this.container.className =
-      "maplibregl-ctrl openbikemap-layers-control";
+      "maplibregl-ctrl openbikemap-map-corner-control openbikemap-layers-control";
 
     this.menu = document.createElement("div");
     this.menu.className = "openbikemap-layers-menu";
@@ -41,25 +36,27 @@ export class FilterControl implements maplibregl.IControl {
     this.menuRoot = ReactDOM.createRoot(this.menu);
 
     this.previewEl = document.createElement("span");
-    this.previewEl.className = "openbikemap-layers-preview";
+    this.previewEl.className =
+      "openbikemap-map-menu-toggle-thumb openbikemap-layers-preview-thumb";
     this.previewEl.setAttribute("aria-hidden", "true");
 
     this.labelEl = document.createElement("span");
-    this.labelEl.className = "openbikemap-layers-label";
+    this.labelEl.className = "openbikemap-map-menu-toggle-label";
 
-    const badgeEl = document.createElement("span");
-    badgeEl.className = "openbikemap-layers-badge";
-    badgeEl.innerHTML = LAYERS_BADGE_ICON;
-    badgeEl.setAttribute("aria-hidden", "true");
+    const chevronEl = document.createElement("span");
+    chevronEl.className = "openbikemap-map-menu-toggle-chevron";
+    chevronEl.setAttribute("aria-hidden", "true");
+    chevronEl.textContent = "▾";
 
     this.toggleButton = document.createElement("button");
     this.toggleButton.type = "button";
-    this.toggleButton.className = "openbikemap-layers-toggle";
+    this.toggleButton.className =
+      "openbikemap-map-menu-toggle openbikemap-layers-toggle";
     this.toggleButton.setAttribute("aria-label", "Map layers");
     this.toggleButton.setAttribute("aria-haspopup", "menu");
     this.toggleButton.setAttribute("aria-expanded", "false");
     this.toggleButton.title = "Map layers";
-    this.toggleButton.append(this.previewEl, this.labelEl, badgeEl);
+    this.toggleButton.append(this.previewEl, this.labelEl, chevronEl);
     this.toggleButton.addEventListener("click", this.onToggleClick);
 
     this.container.appendChild(this.menu);
@@ -103,6 +100,10 @@ export class FilterControl implements maplibregl.IControl {
     }
   };
 
+  setPeerMenuClose = (close: () => void): void => {
+    this.peerMenuClose = close;
+  };
+
   private updateToggleAppearance = (): void => {
     const option = getBasemapOption(this.mapStyle);
     this.previewEl.style.background = option.preview;
@@ -127,17 +128,18 @@ export class FilterControl implements maplibregl.IControl {
   };
 
   private openMenuInternal = (): void => {
+    this.peerMenuClose?.();
     this.menuOpen = true;
     this.menu.hidden = false;
     this.toggleButton.setAttribute("aria-expanded", "true");
-    this.container.classList.add("openbikemap-layers-control-open");
+    this.container.classList.add("openbikemap-map-corner-control-open");
   };
 
   private closeMenuInternal = (): void => {
     this.menuOpen = false;
     this.menu.hidden = true;
     this.toggleButton.setAttribute("aria-expanded", "false");
-    this.container.classList.remove("openbikemap-layers-control-open");
+    this.container.classList.remove("openbikemap-map-corner-control-open");
   };
 
   private renderMenu = (): void => {
