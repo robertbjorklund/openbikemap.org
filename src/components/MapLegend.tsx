@@ -11,6 +11,12 @@ import {
 
 const LEGEND_ROWS = [
   {
+    key: "routes",
+    label: AppConfig.layerFilters.routes.railLabel,
+    isActive: (filters: MapFilters) => filters.showRoutes,
+    Swatch: RouteLineSwatch,
+  },
+  {
     key: "mtbTrail",
     label: AppConfig.layerFilters.mtbTrail.railLabel,
     isActive: (filters: MapFilters) => filters.showMtbSts,
@@ -21,12 +27,6 @@ const LEGEND_ROWS = [
     label: AppConfig.layerFilters.mtbBikePark.railLabel,
     isActive: (filters: MapFilters) => filters.showMtbImba,
     Swatch: ImbaLineSwatch,
-  },
-  {
-    key: "routes",
-    label: AppConfig.layerFilters.routes.railLabel,
-    isActive: (filters: MapFilters) => filters.showRoutes,
-    Swatch: RouteLineSwatch,
   },
 ] as const;
 

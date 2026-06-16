@@ -6,9 +6,9 @@ import { Themed } from "./Themed";
 
 const LEGEND_TOGGLE_ICON = `
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-    <line x1="2" y1="4" x2="16" y2="4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-    <line x1="2" y1="9" x2="16" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 2"/>
-    <line x1="2" y1="14" x2="16" y2="14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="2" y1="4" x2="16" y2="4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="2" y1="9" x2="16" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <line x1="2" y1="14" x2="16" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 2"/>
   </svg>
 `;
 
