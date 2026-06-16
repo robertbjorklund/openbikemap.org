@@ -14,8 +14,8 @@ import { debounce, throttle } from "throttle-debounce";
 import { API_BASE_URL } from "../Config";
 import { MapMarker } from "../MapMarker";
 import { AppConfig } from "../AppConfig";
-import { FeatureType, TRAIL_CATEGORY_LABELS, type MapFeature } from "../types/FeatureTypes";
-import { getDefaultFeatureTitle } from "../utils/MapFeatureKind";
+import { FeatureType, type MapFeature } from "../types/FeatureTypes";
+import { getDefaultFeatureTitle, getMapFeatureKind } from "../utils/MapFeatureKind";
 import EventBus from "./EventBus";
 import { trackMatomoEvent } from "../utils/matomo";
 
@@ -228,5 +228,5 @@ function secondaryText(result: SearchResult): string {
   if (properties.type === FeatureType.Route) {
     return AppConfig.layerFilters.routes.featureLabel;
   }
-  return TRAIL_CATEGORY_LABELS[properties.category];
+  return getMapFeatureKind(result.data).label;
 }

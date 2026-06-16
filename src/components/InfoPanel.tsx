@@ -8,11 +8,11 @@ import { formatRouteDisplayTitle } from "../types/RouteNetwork";
 import {
   FeatureType,
   TrailCategory,
-  TRAIL_CATEGORY_LABELS,
   type MapFeature,
   type RouteFeature,
   type TrailFeature,
 } from "../types/FeatureTypes";
+import { getDefaultFeatureTitle } from "../utils/MapFeatureKind";
 import EventBus from "./EventBus";
 import type { RouteGroupSelection } from "./SelectedObject";
 import { Info } from "./Info";
@@ -29,7 +29,7 @@ function featurePanelTitle(feature: MapFeature): string {
     return (
       properties.name ||
       properties.ref ||
-      TRAIL_CATEGORY_LABELS[properties.category]
+      getDefaultFeatureTitle(feature)
     );
   }
   return formatRouteDisplayTitle(properties.name, properties.ref);
