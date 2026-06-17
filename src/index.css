@@ -557,7 +557,7 @@ body {
 
 .side-panel-rail-expand-tab {
   position: fixed;
-  top: calc(var(--beta-banner-height, 0px) + 50%);
+  top: calc(var(--beta-banner-height, 0px) + 8px);
   left: 0;
   z-index: 5;
   display: flex;
@@ -566,7 +566,6 @@ body {
   width: 28px;
   height: 56px;
   padding: 0;
-  transform: translateY(-50%);
   border-radius: 0 10px 10px 0;
   background: var(--side-panel-rail-bg, #f1f4f5);
   border: 1px solid var(--side-panel-rail-border, #e0e3e7);

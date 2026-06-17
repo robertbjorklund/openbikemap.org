@@ -13,7 +13,7 @@ import {
   type RouteFeature,
   type TrailFeature,
 } from "../types/FeatureTypes";
-import { getDefaultFeatureTitle } from "../utils/MapFeatureKind";
+import { getDefaultFeatureTitle, getMapFeatureKind } from "../utils/MapFeatureKind";
 import EventBus from "./EventBus";
 import type { RouteGroupSelection } from "./SelectedObject";
 import { Info } from "./Info";
@@ -84,53 +84,58 @@ export const InfoPanel: React.FunctionComponent<{
   map?: maplibregl.Map;
 }> = (props) => {
   const isMobile = useMobilePanelLayout();
-  const isRoute = props.feature.properties.type === FeatureType.Route;
-  const compactMobileRoute = isMobile && isRoute;
-  const route = isRoute ? (props.feature as RouteFeature) : null;
+  const compactMobilePanel = isMobile;
+  const featureKind = getMapFeatureKind(props.feature);
 
-  const headerCenter =
-    compactMobileRoute && route ? (
-      <Box
-        className="route-mobile-header"
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 0.75,
-          flex: 1,
-          minWidth: 0,
-        }}
-      >
-        <MapFeatureKindRailIcon kind="bicycle-route" size={MOBILE_ROUTE_HEADER_ICON_SIZE} />
+  const headerCenter = compactMobilePanel ? (
+    <Box
+      className="route-mobile-header"
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: 0.75,
+        flex: 1,
+        minWidth: 0,
+      }}
+    >
+      <MapFeatureKindRailIcon
+        kind={featureKind.kind}
+        size={MOBILE_ROUTE_HEADER_ICON_SIZE}
+      />
+      {props.feature.properties.type === FeatureType.Route ? (
         <RouteNetworkLegendIcon
-          network={route.properties.network}
-          label={route.properties.ref}
-          name={route.properties.name}
+          network={(props.feature as RouteFeature).properties.network}
+          label={(props.feature as RouteFeature).properties.ref}
+          name={(props.feature as RouteFeature).properties.name}
           size={MOBILE_ROUTE_SHIELD_SIZE}
         />
-        <Typography
-          variant="subtitle1"
-          component="h2"
-          sx={{ fontWeight: 600, flex: 1, minWidth: 0, mb: 0, overflow: "hidden" }}
-        >
-          <OverflowScrollText>{featurePanelTitle(props.feature)}</OverflowScrollText>
-        </Typography>
-      </Box>
-    ) : undefined;
+      ) : (
+        featurePanelTitleIcon(props.feature)
+      )}
+      <Typography
+        variant="subtitle1"
+        component="h2"
+        sx={{ fontWeight: 600, flex: 1, minWidth: 0, mb: 0, overflow: "hidden" }}
+      >
+        <OverflowScrollText>{featurePanelTitle(props.feature)}</OverflowScrollText>
+      </Typography>
+    </Box>
+  ) : undefined;
 
   const routeDetailsExpanded = props.routeDetailsExpanded ?? true;
 
   return (
     <PanelShell
-      title={compactMobileRoute ? undefined : featurePanelTitle(props.feature)}
+      title={compactMobilePanel ? undefined : featurePanelTitle(props.feature)}
       titleIcon={
-        compactMobileRoute ? undefined : featurePanelTitleIcon(props.feature)
+        compactMobilePanel ? undefined : featurePanelTitleIcon(props.feature)
       }
       headerCenter={headerCenter}
-      hideFeatureTitleSection={compactMobileRoute}
-      useCollapseDownIcon={compactMobileRoute}
-      sheetCollapsed={compactMobileRoute && !routeDetailsExpanded}
+      hideFeatureTitleSection={compactMobilePanel}
+      useCollapseDownIcon={compactMobilePanel}
+      sheetCollapsed={compactMobilePanel && !routeDetailsExpanded}
       onBack={() => {
-        if (compactMobileRoute && !routeDetailsExpanded) {
+        if (compactMobilePanel && !routeDetailsExpanded) {
           props.eventBus.openRoute();
         } else {
           props.eventBus.collapseInfoPanel();
@@ -144,7 +149,7 @@ export const InfoPanel: React.FunctionComponent<{
         eventBus={props.eventBus}
         embedded
         showFeatureTitle={false}
-        compactMobile={compactMobileRoute}
+        compactMobile={compactMobilePanel}
         map={props.map}
       />
     </PanelShell>

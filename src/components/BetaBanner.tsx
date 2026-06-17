@@ -28,10 +28,7 @@ export const BetaBanner: React.FunctionComponent = () => {
   return (
     <>
       <div className="beta-banner" role="status">
-        <span className="beta-banner-text">
-          <strong>{AppConfig.appName}</strong> is in beta — currently covering
-          Sweden. Help us improve the map.
-        </span>
+        <span className="beta-banner-text">BETA. Only routes in Sweden</span>
         <Button
           className="beta-banner-feedback-button"
           variant="contained"

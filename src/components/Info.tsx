@@ -34,6 +34,7 @@ export const Info: React.FunctionComponent<{
         width={props.width}
         embedded={props.embedded}
         showFeatureTitle={showFeatureTitle}
+        compactMobile={compactMobile}
         map={props.map}
       />
     );

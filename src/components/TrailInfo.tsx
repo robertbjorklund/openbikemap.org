@@ -57,6 +57,8 @@ function TrailInfoBody({
 
   showPanelActions = false,
 
+  compactMobile = false,
+
   map,
 
 }: {
@@ -66,6 +68,8 @@ function TrailInfoBody({
   showTitle?: boolean;
 
   showPanelActions?: boolean;
+
+  compactMobile?: boolean;
 
   map?: maplibregl.Map;
 
@@ -136,27 +140,24 @@ function TrailInfoBody({
 
     <>
 
-      {showTitle && (
+      {!compactMobile &&
+        (showTitle ? (
+          <InfoFeatureHeader
+            title={title}
+            subtitle={subtitle}
+            subtitleIcon={subtitleIcon}
+            icon={difficultyIcon}
+          />
+        ) : (
+          subtitle && (
+            <InfoFeatureHeader
+              subtitle={subtitle}
+              subtitleIcon={subtitleIcon}
+            />
+          )
+        ))}
 
-        <InfoFeatureHeader
-          title={title}
-          subtitle={subtitle}
-          subtitleIcon={subtitleIcon}
-          icon={difficultyIcon}
-        />
-
-      )}
-
-      {!showTitle && subtitle && (
-
-        <InfoFeatureHeader
-          subtitle={subtitle}
-          subtitleIcon={subtitleIcon}
-        />
-
-      )}
-
-      {isMtbTrail && (
+      {isMtbTrail && !compactMobile && (
 
         <Box sx={{ mb: 1.5 }}>
 
@@ -176,21 +177,31 @@ function TrailInfoBody({
 
       )}
 
-      <Divider sx={{ my: 1.5 }} />
+      {isMtbTrail && compactMobile && (
+
+        <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
+
+          {scaleLabel}
+
+        </Typography>
+
+      )}
+
+      {!compactMobile && <Divider sx={{ my: 1.5 }} />}
 
       {length && (
-        <Typography variant="body2" gutterBottom>
+        <Typography variant="body2" gutterBottom sx={{ mb: compactMobile ? 0.25 : undefined }}>
           Length: {length}
         </Typography>
       )}
 
-      {properties.surface && (
+      {!compactMobile && properties.surface && (
 
         <Typography variant="body2">Surface: {properties.surface}</Typography>
 
       )}
 
-      {properties.lit !== null && (
+      {!compactMobile && properties.lit !== null && (
 
         <Typography variant="body2">
 
@@ -200,23 +211,39 @@ function TrailInfoBody({
 
       )}
 
-      {properties.network && (
+      {!compactMobile && properties.network && (
 
         <Typography variant="body2">Network: {properties.network}</Typography>
 
       )}
 
-
-
-      <ElevationStats feature={feature} map={map} />
+      {!compactMobile && <ElevationStats feature={feature} map={map} />}
 
       {showPanelActions && (
         <>
-          <Divider sx={{ my: 1.5 }} />
-          <Box sx={{ mb: 1 }}>
+          <Divider sx={{ my: compactMobile ? 1 : 1.5 }} />
+          <Box sx={{ mb: compactMobile ? 0.5 : 1 }}>
             <InfoPanelActions feature={feature} />
           </Box>
         </>
+      )}
+
+      {compactMobile && <ElevationStats feature={feature} map={map} />}
+
+      {compactMobile && properties.surface && (
+
+        <Typography variant="body2">Surface: {properties.surface}</Typography>
+
+      )}
+
+      {compactMobile && properties.lit !== null && (
+
+        <Typography variant="body2">
+
+          Lit: {properties.lit ? "Yes" : "No"}
+
+        </Typography>
+
       )}
 
       {segmentCount > 1 && (
@@ -251,6 +278,8 @@ export const TrailInfo: React.FunctionComponent<{
 
   showFeatureTitle?: boolean;
 
+  compactMobile?: boolean;
+
   map?: maplibregl.Map;
 
 }> = (props) => {
@@ -268,6 +297,8 @@ export const TrailInfo: React.FunctionComponent<{
         showTitle={showTitle}
 
         showPanelActions
+
+        compactMobile={props.compactMobile ?? false}
 
         map={props.map}
 

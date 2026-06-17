@@ -37,6 +37,9 @@ import { LogoControl } from "./LogoControl";
 import { MapNavigationControl } from "./MapNavigationControl";
 import { StyledGeolocateControl } from "./StyledGeolocateControl";
 import { registerSatelliteTileProtocol } from "./SatelliteTileProtocol";
+import {
+  attachAttributionAutoCollapse,
+} from "../utils/attributionControl";
 import { SelectedObject, type RouteGroupSelection } from "./SelectedObject";
 import { SidePanelControl } from "./SidePanelControl";
 import State from "./State";
@@ -194,6 +197,7 @@ export class Map {
   private filterControl: FilterControl;
   private legendControl: LegendControl;
   private attributionControl: maplibregl.AttributionControl;
+  private cancelAttributionAutoCollapse: (() => void) | null = null;
   private mapScaleControl: maplibregl.ScaleControl;
   private selectedFeature: MapFeature | null = null;
   private routeGroupSelection: RouteGroupSelection | null = null;
@@ -258,13 +262,16 @@ export class Map {
       triggerWhenInitialized: true,
     });
 
-    // Bottom-right controls stack upward; first added sits on the bottom edge.
+    // Compact (i) toggle: expanded on load, collapses on pan/zoom or after 5s (OSM guidelines).
     this.attributionControl = new maplibregl.AttributionControl({
+      compact: true,
       customAttribution: [
         '<a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       ],
     });
     this.map.addControl(this.attributionControl, "bottom-right");
+    this.cancelAttributionAutoCollapse?.();
+    this.cancelAttributionAutoCollapse = attachAttributionAutoCollapse(this.map);
 
     if (isEmbedded) {
       this.map.addControl(new LogoControl(), "bottom-right");

@@ -79,11 +79,11 @@ export function getSidePanelRailExpanded(): boolean {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === null) {
-      return false;
+      return true;
     }
     return stored === "true";
   } catch {
-    return false;
+    return true;
   }
 }
 
