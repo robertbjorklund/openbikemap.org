@@ -188,3 +188,15 @@ Wait 1–5 minutes, then test:
 | Out of memory on import | Run import when traffic is low; CX33 has 8 GB |
 
 Tiles and API only listen on `127.0.0.1` — public access is via Caddy on 443.
+
+---
+
+## 9. Analytics (optional)
+
+For **Cloudflare Web Analytics** (traffic) and **Matomo** (product events: search, GPX, filters), see [ANALYTICS.md](ANALYTICS.md).
+
+Quick summary:
+
+1. Enable Web Analytics in Cloudflare → copy beacon token → `VITE_CF_BEACON_TOKEN` build var.
+2. Run Matomo on VPS (`infra/matomo/`) → `analytics.openbikemap.org` in Caddy → `VITE_MATOMO_URL` + `VITE_MATOMO_SITE_ID`.
+3. Redeploy frontend after setting build variables.

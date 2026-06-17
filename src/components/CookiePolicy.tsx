@@ -1,7 +1,11 @@
 import { Link, Typography } from "@mui/material";
 import * as React from "react";
 import { AppConfig } from "../AppConfig";
+import { isCloudflareAnalyticsConfigured } from "../config/CloudflareAnalyticsConfig";
 import { isMatomoConfigured } from "../config/MatomoConfig";
+
+const hasProductAnalytics =
+  isMatomoConfigured || isCloudflareAnalyticsConfigured;
 
 export const CookiePolicy: React.FunctionComponent = () => {
   return (
@@ -41,7 +45,7 @@ export const CookiePolicy: React.FunctionComponent = () => {
         app sends requests to {AppConfig.appName} services (API and vector
         tiles). Those requests may be logged on our servers in the usual way for
         operating a web service.
-        {!isMatomoConfigured && (
+        {!hasProductAnalytics && (
           <> We do not use first-party analytics or advertising cookies.</>
         )}
       </Typography>
@@ -87,6 +91,20 @@ export const CookiePolicy: React.FunctionComponent = () => {
       <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
         Analytics and advertising
       </Typography>
+      {isCloudflareAnalyticsConfigured && (
+        <Typography paragraph>
+          We use{" "}
+          <Link
+            href="https://www.cloudflare.com/web-analytics/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Cloudflare Web Analytics
+          </Link>{" "}
+          to measure overall traffic (page views, referrers, countries, and
+          devices). It does not use cookies or collect personal identifiers.
+        </Typography>
+      )}
       {isMatomoConfigured ? (
         <Typography paragraph>
           We use a self-hosted{" "}
@@ -100,10 +118,12 @@ export const CookiePolicy: React.FunctionComponent = () => {
           supported. We do not use third-party advertising cookies.
         </Typography>
       ) : (
-        <Typography paragraph>
-          {AppConfig.appName} does not use first-party analytics or advertising
-          cookies.
-        </Typography>
+        !isCloudflareAnalyticsConfigured && (
+          <Typography paragraph>
+            {AppConfig.appName} does not use first-party analytics or advertising
+            cookies.
+          </Typography>
+        )
       )}
 
       <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>

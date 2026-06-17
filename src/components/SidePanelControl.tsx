@@ -36,9 +36,15 @@ import type { RouteGroupSelection } from "./SelectedObject";
 
 import { Themed } from "./Themed";
 
+import {
+  getSidePanelRailExpanded,
+  getSidePanelRailWidth,
+  isSidePanelRailCollapsible,
+  setSidePanelRailExpanded,
+  SIDE_PANEL_RAIL_WIDTH,
+} from "./sidePanelRailLayout";
 
-
-export const SIDE_PANEL_RAIL_WIDTH = 80;
+export { SIDE_PANEL_RAIL_WIDTH };
 
 /** Fly-out panel content width; total open width includes the rail. */
 export const SIDE_PANEL_CONTENT_WIDTH = 400;
@@ -70,6 +76,15 @@ export class SidePanelControl implements maplibregl.IControl {
 
   private routeGroup: RouteGroupSelection | null = null;
 
+  private railExpanded = getSidePanelRailExpanded();
+
+  private onRailResize = () => {
+    this.railExpanded = getSidePanelRailExpanded();
+    this.updatePanelWidth();
+    this.map?.resize();
+    this.render();
+  };
+
 
 
   constructor(
@@ -96,6 +111,8 @@ export class SidePanelControl implements maplibregl.IControl {
 
     this.initRailLayout();
 
+    window.addEventListener("resize", this.onRailResize);
+
     this.render();
 
     return this.placeholder;
@@ -110,12 +127,15 @@ export class SidePanelControl implements maplibregl.IControl {
 
     this.root = null;
 
+    window.removeEventListener("resize", this.onRailResize);
+
     this.panel.remove();
 
     this.placeholder.remove();
 
     this.map?.getContainer().style.removeProperty("--side-panel-rail-width");
     this.map?.getContainer().style.removeProperty("--side-panel-width");
+    this.map?.getContainer().style.removeProperty("--side-panel-content-width");
 
     this.map = null;
 
@@ -197,21 +217,38 @@ export class SidePanelControl implements maplibregl.IControl {
     this.render();
   };
 
+  private handleExpandRail = () => {
+    setSidePanelRailExpanded(true);
+    this.railExpanded = true;
+    this.updatePanelWidth();
+    this.map?.resize();
+    this.render();
+  };
+
+  private handleCollapseRail = () => {
+    setSidePanelRailExpanded(false);
+    this.railExpanded = false;
+    this.updatePanelWidth();
+    this.map?.resize();
+    this.render();
+  };
+
   /** Reserve rail width only; expanded panel content overlays the map. */
   private updatePanelWidth = () => {
     const container = this.map?.getContainer();
     if (!container) {
       return;
     }
-    container.style.setProperty(
-      "--side-panel-rail-width",
-      `${SIDE_PANEL_RAIL_WIDTH}px`,
-    );
+    const railWidth = getSidePanelRailWidth();
     const contentWidth = SIDE_PANEL_CONTENT_WIDTH;
+    container.style.setProperty("--side-panel-rail-width", `${railWidth}px`);
     container.style.setProperty(
-      "--side-panel-width",
-      `${SIDE_PANEL_RAIL_WIDTH + contentWidth}px`,
+      "--side-panel-content-width",
+      `${contentWidth}px`,
     );
+    const openWidth =
+      railWidth > 0 ? railWidth + contentWidth : contentWidth;
+    container.style.setProperty("--side-panel-width", `${openWidth}px`);
   };
 
   private initRailLayout = () => {
@@ -295,9 +332,13 @@ export class SidePanelControl implements maplibregl.IControl {
           open={open}
           searchOpen={this.searchOpen}
           activeView={this.view}
+          railExpanded={this.railExpanded}
+          railCollapsible={isSidePanelRailCollapsible()}
           eventBus={this.eventBus}
           onToggleSearch={this.handleToggleSearch}
           onCloseSearch={this.closeSearch}
+          onExpandRail={this.handleExpandRail}
+          onCollapseRail={this.handleCollapseRail}
         >
           {content}
         </SidePanelFrame>

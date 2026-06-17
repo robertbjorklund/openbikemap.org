@@ -1,12 +1,9 @@
 import * as maplibregl from "maplibre-gl";
 
-import { SIDE_PANEL_RAIL_WIDTH } from "./SidePanelControl";
-
-
+import { getSidePanelRailWidth } from "./sidePanelRailLayout";
 
 export default function controlWidth(map: maplibregl.Map) {
-
-  const leftOffset = SIDE_PANEL_RAIL_WIDTH + 12;
+  const leftOffset = getSidePanelRailWidth() + 12;
 
   const margins = 20 + leftOffset;
 

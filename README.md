@@ -62,6 +62,9 @@ The map loads `http://localhost:8083/styles/terrain/style.json` with Stockholm t
 | `VITE_TILES_STYLE_PATH` | `/styles/terrain/style.json` | MapLibre style path on tileserver-gl |
 | `VITE_MATOMO_URL` | _(unset)_ | Self-hosted Matomo base URL (omit to disable analytics) |
 | `VITE_MATOMO_SITE_ID` | _(unset)_ | Matomo site ID for this property |
+| `VITE_CF_BEACON_TOKEN` | _(unset)_ | Cloudflare Web Analytics beacon token (omit to disable) |
+
+See [docs/ANALYTICS.md](docs/ANALYTICS.md) for production setup (Cloudflare + Matomo on VPS).
 
 ## License
 

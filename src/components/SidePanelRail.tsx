@@ -1,3 +1,4 @@
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import LayersIcon from "@mui/icons-material/Layers";
 import PolicyIcon from "@mui/icons-material/Policy";
 import RouteIcon from "@mui/icons-material/Route";
@@ -23,6 +24,8 @@ export const SidePanelRail: React.FunctionComponent<{
   open: boolean;
   searchOpen: boolean;
   activeView: SidePanelView;
+  showCollapseButton?: boolean;
+  onCollapseRail?: () => void;
   onToggleSearch: () => void;
   onOpenMapLayers: () => void;
   onOpenRoute: () => void;
@@ -40,6 +43,17 @@ export const SidePanelRail: React.FunctionComponent<{
 
   return (
     <div className="side-panel-rail">
+      {props.showCollapseButton && props.onCollapseRail && (
+        <IconButton
+          className="side-panel-rail-collapse-button"
+          aria-label="Hide menu"
+          title="Hide menu"
+          onClick={props.onCollapseRail}
+          size="small"
+        >
+          <ChevronLeftIcon sx={{ fontSize: 22 }} />
+        </IconButton>
+      )}
       <div className="side-panel-rail-main">
         <IconButton
           className={railButtonClass(props.searchOpen)}

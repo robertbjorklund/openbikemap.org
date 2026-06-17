@@ -1,16 +1,15 @@
 import type * as maplibregl from "maplibre-gl";
-import {
-  SIDE_PANEL_CONTENT_WIDTH,
-  SIDE_PANEL_RAIL_WIDTH,
-} from "../components/SidePanelControl";
+import { SIDE_PANEL_CONTENT_WIDTH } from "../components/SidePanelControl";
+import { getSidePanelRailWidth } from "../components/sidePanelRailLayout";
 
 /** Fly-out panel width in map-canvas pixel coordinates. */
 export function sidePanelFlyoutWidthPx(mapContainer: HTMLElement): number {
+  const railWidth = getSidePanelRailWidth();
   const openPanelWidth = Math.min(
-    SIDE_PANEL_RAIL_WIDTH + SIDE_PANEL_CONTENT_WIDTH,
+    railWidth + SIDE_PANEL_CONTENT_WIDTH,
     mapContainer.clientWidth,
   );
-  return Math.max(0, openPanelWidth - SIDE_PANEL_RAIL_WIDTH);
+  return Math.max(0, openPanelWidth - railWidth);
 }
 
 /**

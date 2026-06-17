@@ -39,6 +39,9 @@ body {
   margin-left: var(--side-panel-rail-width, 80px);
   height: calc(100% - var(--beta-banner-height));
   margin-top: var(--beta-banner-height);
+  transition:
+    margin-left 0.25s ease-out,
+    width 0.25s ease-out;
 }
 
 .route-stage-tooltip {
@@ -288,6 +291,14 @@ body {
   .openbikemap-map-menu-toggle-chevron {
     display: none;
   }
+
+  .side-panel-rail {
+    padding: 8px 0;
+  }
+
+  .side-panel-rail-divider {
+    width: 32px;
+  }
 }
 
 .openbikemap-filter-menu-inner {
@@ -376,7 +387,7 @@ body {
   z-index: 3;
   display: flex;
   height: calc(100% - var(--beta-banner-height, 0px));
-  width: 80px;
+  width: var(--side-panel-rail-width, 80px);
   max-width: min(var(--side-panel-width, 480px), 100vw);
   background: transparent;
   box-shadow: 2px 0 6px rgba(0, 0, 0, 0.12);
@@ -391,12 +402,76 @@ body {
   box-shadow: 4px 0 12px rgba(0, 0, 0, 0.18);
 }
 
+.side-panel:not(.side-panel-open).side-panel-rail-collapsed {
+  width: 0;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.side-panel.side-panel-open.side-panel-rail-collapsed {
+  width: min(var(--side-panel-content-width, 400px), 100vw);
+}
+
+.side-panel-rail-collapsed .side-panel-rail {
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  border-right: none;
+}
+
+.side-panel-rail-expand-tab {
+  position: fixed;
+  top: calc(var(--beta-banner-height, 0px) + 50%);
+  left: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 56px;
+  padding: 0;
+  transform: translateY(-50%);
+  border-radius: 0 10px 10px 0;
+  background: var(--side-panel-rail-bg, #f1f4f5);
+  border: 1px solid var(--side-panel-rail-border, #e0e3e7);
+  border-left: none;
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.12);
+  color: var(--app-primary, #007b8b);
+}
+
+.side-panel-rail-expand-tab:hover {
+  background: var(--app-primary-soft, #e0f2f4);
+}
+
+.side-panel-rail-collapse-button {
+  flex-shrink: 0;
+  width: 40px;
+  height: 32px;
+  margin-bottom: 2px;
+  border-radius: 8px;
+  color: var(--app-primary, #007b8b);
+}
+
+.side-panel-rail-collapse-button:hover {
+  background: var(--app-primary-soft, #e0f2f4);
+}
+
+@media (min-width: 481px) {
+  .side-panel-rail-expand-tab,
+  .side-panel-rail-collapse-button {
+    display: none;
+  }
+}
+
 .side-panel-rail {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 80px;
+  width: var(--side-panel-rail-width, 80px);
   height: 100%;
   padding: 12px 0;
   box-sizing: border-box;

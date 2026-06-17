@@ -11,10 +11,12 @@ import { getURLState, updateURL } from "./components/URLHistory";
 import "./index.css";
 import { applyUiTheme } from "./uiTheme";
 import { CameraPositionManager } from "./utils/CameraPositionManager";
+import { initCloudflareAnalytics } from "./utils/cloudflareAnalytics";
 import { initMatomo, trackAppPageView } from "./utils/matomo";
 
 function initialize() {
   applyUiTheme();
+  initCloudflareAnalytics();
   initMatomo();
   trackAppPageView();
 
