@@ -16,6 +16,7 @@ export const RoutesFilterPanel: React.FunctionComponent<{
     <PanelShell
       title={panelTitle}
       subtitle="Signed long-distance cycling routes (asphalt and gravel)."
+      showBack={false}
       actions={
         <Switch
           checked={props.mapFilters.showRoutes}

@@ -19,10 +19,12 @@ export const Info: React.FunctionComponent<{
   width?: number;
   embedded?: boolean;
   showFeatureTitle?: boolean;
+  compactMobile?: boolean;
   map?: maplibregl.Map;
 }> = (props) => {
   const { feature } = props;
   const showFeatureTitle = props.showFeatureTitle ?? true;
+  const compactMobile = props.compactMobile ?? false;
 
   if (feature.properties.type === FeatureType.Trail) {
     return (
@@ -45,6 +47,7 @@ export const Info: React.FunctionComponent<{
       width={props.width}
       embedded={props.embedded}
       showFeatureTitle={showFeatureTitle}
+      compactMobile={compactMobile}
       map={props.map}
     />
   );

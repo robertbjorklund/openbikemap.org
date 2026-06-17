@@ -28,6 +28,7 @@ export const InfoPanelActions: React.FunctionComponent<{
 
   return (
     <Box
+      className="info-panel-actions"
       sx={{
         display: "flex",
         flexWrap: "wrap",

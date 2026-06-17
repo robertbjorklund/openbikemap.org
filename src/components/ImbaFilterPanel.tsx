@@ -16,6 +16,7 @@ export const ImbaFilterPanel: React.FunctionComponent<{
     <PanelShell
       title={panelTitle}
       subtitle="IMBA — International Mountain Bicycling Association trail difficulty (0–4)."
+      showBack={false}
       actions={
         <Switch
           checked={props.mapFilters.showMtbImba}

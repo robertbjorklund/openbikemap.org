@@ -1,4 +1,5 @@
 import type * as maplibregl from "maplibre-gl";
+import { Box, Typography } from "@mui/material";
 import * as React from "react";
 import {
   toMtbImbaScaleFilter,
@@ -16,12 +17,17 @@ import { getDefaultFeatureTitle } from "../utils/MapFeatureKind";
 import EventBus from "./EventBus";
 import type { RouteGroupSelection } from "./SelectedObject";
 import { Info } from "./Info";
+import { MapFeatureKindRailIcon } from "./MapFeatureKindRailIcon";
 import { MtbImbaLegendIcon } from "./MtbImbaLegendIcon";
 import { MtbScaleLegendIcon } from "./MtbScaleLegendIcon";
 import { PanelShell } from "./PanelShell";
+import { OverflowScrollText } from "./OverflowScrollText";
 import { RouteNetworkLegendIcon } from "./RouteNetworkLegendIcon";
+import { useMobilePanelLayout } from "./useMobilePanelLayout";
 
 const PANEL_TITLE_ICON_SIZE = 32;
+const MOBILE_ROUTE_HEADER_ICON_SIZE = 26;
+const MOBILE_ROUTE_SHIELD_SIZE = 28;
 
 function featurePanelTitle(feature: MapFeature): string {
   const { properties } = feature;
@@ -74,12 +80,62 @@ export const InfoPanel: React.FunctionComponent<{
   feature: MapFeature;
   routeGroup?: RouteGroupSelection;
   eventBus: EventBus;
+  routeDetailsExpanded?: boolean;
   map?: maplibregl.Map;
 }> = (props) => {
+  const isMobile = useMobilePanelLayout();
+  const isRoute = props.feature.properties.type === FeatureType.Route;
+  const compactMobileRoute = isMobile && isRoute;
+  const route = isRoute ? (props.feature as RouteFeature) : null;
+
+  const headerCenter =
+    compactMobileRoute && route ? (
+      <Box
+        className="route-mobile-header"
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 0.75,
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
+        <MapFeatureKindRailIcon kind="bicycle-route" size={MOBILE_ROUTE_HEADER_ICON_SIZE} />
+        <RouteNetworkLegendIcon
+          network={route.properties.network}
+          label={route.properties.ref}
+          name={route.properties.name}
+          size={MOBILE_ROUTE_SHIELD_SIZE}
+        />
+        <Typography
+          variant="subtitle1"
+          component="h2"
+          sx={{ fontWeight: 600, flex: 1, minWidth: 0, mb: 0, overflow: "hidden" }}
+        >
+          <OverflowScrollText>{featurePanelTitle(props.feature)}</OverflowScrollText>
+        </Typography>
+      </Box>
+    ) : undefined;
+
+  const routeDetailsExpanded = props.routeDetailsExpanded ?? true;
+
   return (
     <PanelShell
-      title={featurePanelTitle(props.feature)}
-      titleIcon={featurePanelTitleIcon(props.feature)}
+      title={compactMobileRoute ? undefined : featurePanelTitle(props.feature)}
+      titleIcon={
+        compactMobileRoute ? undefined : featurePanelTitleIcon(props.feature)
+      }
+      headerCenter={headerCenter}
+      hideFeatureTitleSection={compactMobileRoute}
+      useCollapseDownIcon={compactMobileRoute}
+      sheetCollapsed={compactMobileRoute && !routeDetailsExpanded}
+      onBack={() => {
+        if (compactMobileRoute && !routeDetailsExpanded) {
+          props.eventBus.openRoute();
+        } else {
+          props.eventBus.collapseInfoPanel();
+        }
+      }}
       onClose={() => props.eventBus.hideInfo()}
     >
       <Info
@@ -88,6 +144,7 @@ export const InfoPanel: React.FunctionComponent<{
         eventBus={props.eventBus}
         embedded
         showFeatureTitle={false}
+        compactMobile={compactMobileRoute}
         map={props.map}
       />
     </PanelShell>

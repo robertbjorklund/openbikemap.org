@@ -25,6 +25,7 @@ import { isFeatureVisibleUnderFilters } from "./MapFilterRules";
 import { loadGeoJSON } from "./GeoJSONLoader";
 import type { ObjectIDType } from "./SelectedObject";
 import type { SidePanelView } from "./SidePanelView";
+import { isSidePanelRailCollapsible } from "./sidePanelRailLayout";
 import State, { StateChanges } from "./State";
 import { setUnitSystem } from "./UnitSystemManager";
 import { URLState } from "./URLHistory";
@@ -56,10 +57,6 @@ export default class StateReducer implements EventBus {
     this.openMtbFilter();
   };
 
-  openMapLayers = () => {
-    this.toggleSidePanel("mapLayers");
-  };
-
   openMtbFilter = () => {
     this.toggleSidePanel("mtbFilter");
   };
@@ -74,9 +71,30 @@ export default class StateReducer implements EventBus {
 
   openRoute = () => {
     if (this._state.sidePanelView === "route") {
-      this.setSidePanel(null);
+      if (this._state.selectedObject && !this._state.selectedObject.showInfo) {
+        this.update({
+          selectedObject: {
+            ...this._state.selectedObject,
+            showInfo: true,
+          },
+        });
+        return;
+      }
+      this.collapseInfoPanel();
       return;
     }
+
+    if (this._state.selectedObject?.feature) {
+      this.update({
+        sidePanelView: "route",
+        selectedObject: {
+          ...this._state.selectedObject,
+          showInfo: true,
+        },
+      });
+      return;
+    }
+
     this.setSidePanel("route");
   };
 
@@ -90,14 +108,6 @@ export default class StateReducer implements EventBus {
     this.toggleSidePanel("settings");
   };
 
-  openCredits = () => {
-    this.toggleSidePanel("credits");
-  };
-
-  openCookiePolicy = () => {
-    this.toggleSidePanel("cookiePolicy");
-  };
-
   closeSidebar = () => {
     this.closeMenu();
   };
@@ -107,14 +117,6 @@ export default class StateReducer implements EventBus {
       return;
     }
     this.setSidePanel(null);
-  };
-
-  backToLayers = () => {
-    const changes: StateChanges = { sidePanelView: "mapLayers" };
-    if (this._state.sidePanelView === "route") {
-      changes.selectedObject = null;
-    }
-    this.update(changes);
   };
 
   openAboutInfo = () => {
@@ -452,6 +454,32 @@ export default class StateReducer implements EventBus {
     });
   };
 
+  collapseInfoPanel = () => {
+    if (this._state.sidePanelView === "route") {
+      if (this._state.selectedObject) {
+        this.update({
+          sidePanelView: isSidePanelRailCollapsible() ? "route" : null,
+          selectedObject: {
+            ...this._state.selectedObject,
+            showInfo: false,
+          },
+        });
+      } else {
+        this.setSidePanel(null);
+      }
+      return;
+    }
+
+    if (this._state.selectedObject) {
+      this.update({
+        selectedObject: {
+          ...this._state.selectedObject,
+          showInfo: false,
+        },
+      });
+    }
+  };
+
   hideInfo = () => {
     this.update({
       sidePanelView:
@@ -509,9 +537,22 @@ export default class StateReducer implements EventBus {
   private toggleSidePanel(view: Exclude<SidePanelView, null>) {
     if (this._state.sidePanelView === view) {
       this.closeMenu();
-    } else {
-      this.setSidePanel(view);
+      return;
     }
+
+    const changes: StateChanges = { sidePanelView: view };
+
+    if (
+      isSidePanelRailCollapsible() &&
+      this._state.selectedObject?.showInfo
+    ) {
+      changes.selectedObject = {
+        ...this._state.selectedObject,
+        showInfo: false,
+      };
+    }
+
+    this.update(changes);
   }
 
   private update(changes: StateChanges): void {
@@ -537,14 +578,6 @@ export default class StateReducer implements EventBus {
         delete (changes as Record<string, unknown>)[key];
       }
     });
-
-    if (
-      this._state.selectedObject?.showInfo &&
-      this._state.sidePanelView === null
-    ) {
-      this._state.sidePanelView = "route";
-      changes.sidePanelView = "route";
-    }
 
     this.updateHandler(this._state, changes);
   }

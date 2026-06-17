@@ -6,17 +6,23 @@ import EventBus from "./EventBus";
 import type { RouteGroupSelection } from "./SelectedObject";
 import { InfoPanel } from "./InfoPanel";
 import { PanelShell } from "./PanelShell";
+import { useMobilePanelLayout } from "./useMobilePanelLayout";
 
 export const RoutePanel: React.FunctionComponent<{
   feature: MapFeature | null;
   routeGroup?: RouteGroupSelection;
   eventBus: EventBus;
+  routeDetailsExpanded?: boolean;
   map?: maplibregl.Map;
 }> = (props) => {
+  const isMobile = useMobilePanelLayout();
+
   if (!props.feature) {
     return (
       <PanelShell
         title="Route"
+        showBack={false}
+        useCollapseDownIcon={isMobile}
         onClose={() => props.eventBus.closeRoutePanel()}
       >
         <Typography variant="body2" color="text.secondary">
@@ -32,6 +38,7 @@ export const RoutePanel: React.FunctionComponent<{
       feature={props.feature}
       routeGroup={props.routeGroup}
       eventBus={props.eventBus}
+      routeDetailsExpanded={props.routeDetailsExpanded}
       map={props.map}
     />
   );

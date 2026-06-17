@@ -51,6 +51,8 @@ function RouteInfoBody({
 
   showPanelActions = false,
 
+  compactMobile = false,
+
   map,
 
 }: {
@@ -64,6 +66,8 @@ function RouteInfoBody({
   showTitle?: boolean;
 
   showPanelActions?: boolean;
+
+  compactMobile?: boolean;
 
   map?: maplibregl.Map;
 
@@ -114,19 +118,20 @@ function RouteInfoBody({
 
     <>
 
-      {showTitle ? (
-        <InfoFeatureHeader
-          title={title}
-          subtitle={subtitle}
-          subtitleIcon={subtitleIcon}
-          icon={networkIcon}
-        />
-      ) : (
-        <InfoFeatureHeader
-          subtitle={subtitle}
-          subtitleIcon={subtitleIcon}
-        />
-      )}
+      {!compactMobile &&
+        (showTitle ? (
+          <InfoFeatureHeader
+            title={title}
+            subtitle={subtitle}
+            subtitleIcon={subtitleIcon}
+            icon={networkIcon}
+          />
+        ) : (
+          <InfoFeatureHeader
+            subtitle={subtitle}
+            subtitleIcon={subtitleIcon}
+          />
+        ))}
 
       {routeGroup && !routeGroup.activeStageId && (
         <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -148,17 +153,17 @@ function RouteInfoBody({
         </Typography>
       )}
 
-      <Divider sx={{ my: 1.5 }} />
+      {!compactMobile && <Divider sx={{ my: 1.5 }} />}
 
       {length && (
-        <Typography variant="body2" gutterBottom>
+        <Typography variant="body2" gutterBottom sx={{ mb: compactMobile ? 0.25 : undefined }}>
           Length: {length}
         </Typography>
       )}
 
       {properties.pavedRatio !== null && (
 
-        <Typography variant="body2" gutterBottom>
+        <Typography variant="body2" gutterBottom sx={{ mb: compactMobile ? 0.5 : undefined }}>
 
           Surface: {Math.round(properties.pavedRatio * 100)}% paved
 
@@ -166,13 +171,13 @@ function RouteInfoBody({
 
       )}
 
-      {properties.distance && (
+      {!compactMobile && properties.distance && (
 
         <Typography variant="body2">Distance: {properties.distance}</Typography>
 
       )}
 
-      {properties.roundtrip !== null && (
+      {!compactMobile && properties.roundtrip !== null && (
 
         <Typography variant="body2">
 
@@ -182,17 +187,33 @@ function RouteInfoBody({
 
       )}
 
-
-
-      <ElevationStats feature={feature} map={map} />
+      {!compactMobile && <ElevationStats feature={feature} map={map} />}
 
       {showPanelActions && (
         <>
-          <Divider sx={{ my: 1.5 }} />
-          <Box sx={{ mb: 1 }}>
+          <Divider sx={{ my: compactMobile ? 1 : 1.5 }} />
+          <Box sx={{ mb: compactMobile ? 0.5 : 1 }}>
             <InfoPanelActions feature={feature} />
           </Box>
         </>
+      )}
+
+      {compactMobile && <ElevationStats feature={feature} map={map} />}
+
+      {compactMobile && properties.distance && (
+
+        <Typography variant="body2">Distance: {properties.distance}</Typography>
+
+      )}
+
+      {compactMobile && properties.roundtrip !== null && (
+
+        <Typography variant="body2">
+
+          Roundtrip: {properties.roundtrip ? "Yes" : "No"}
+
+        </Typography>
+
       )}
 
       {segmentCount > 1 && (
@@ -229,6 +250,8 @@ export const RouteInfo: React.FunctionComponent<{
 
   showFeatureTitle?: boolean;
 
+  compactMobile?: boolean;
+
   map?: maplibregl.Map;
 
 }> = (props) => {
@@ -250,6 +273,8 @@ export const RouteInfo: React.FunctionComponent<{
         showTitle={showTitle}
 
         showPanelActions
+
+        compactMobile={props.compactMobile ?? false}
 
         map={props.map}
 

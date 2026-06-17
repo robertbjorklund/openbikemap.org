@@ -61,9 +61,7 @@ function initialize() {
       selectedObjectID: state.selectedObject?.id ?? null,
       selectedObjectIDType:
         state.selectedObject?.idType ?? AppConfig.defaultObjectIdType,
-      showInfo:
-        state.sidePanelView === "route" &&
-        (state.selectedObject?.showInfo ?? false),
+      showInfo: state.selectedObject?.showInfo ?? false,
       markers: state.markers,
     });
 

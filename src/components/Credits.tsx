@@ -1,17 +1,10 @@
 import { Link, Typography } from "@mui/material";
 import * as React from "react";
 import { AppConfig } from "../AppConfig";
-import EventBus from "./EventBus";
-import { PanelShell } from "./PanelShell";
 
-export const CreditsPanel: React.FunctionComponent<{
-  eventBus: EventBus;
-}> = (props) => {
+export const Credits: React.FunctionComponent = () => {
   return (
-    <PanelShell
-      title="Credits"
-      onClose={() => props.eventBus.closeMenu()}
-    >
+    <>
       <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
         MTB and bicycle routes
       </Typography>
@@ -89,6 +82,6 @@ export const CreditsPanel: React.FunctionComponent<{
         </Link>
         .
       </Typography>
-    </PanelShell>
+    </>
   );
 };

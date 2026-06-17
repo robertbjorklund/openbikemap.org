@@ -1,11 +1,7 @@
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
-import LayersIcon from "@mui/icons-material/Layers";
-import PolicyIcon from "@mui/icons-material/Policy";
 import RouteIcon from "@mui/icons-material/Route";
-import SearchIcon from "@mui/icons-material/Search";
 import SettingsIcon from "@mui/icons-material/Settings";
-import CookieIcon from "@mui/icons-material/Cookie";
-import { Divider, IconButton } from "@mui/material";
+import { IconButton } from "@mui/material";
 import * as React from "react";
 import { AppConfig } from "../AppConfig";
 import { AboutRailIcon } from "./icons/AboutRailIcon";
@@ -22,24 +18,27 @@ function railButtonClass(active: boolean): string {
 
 export const SidePanelRail: React.FunctionComponent<{
   open: boolean;
-  searchOpen: boolean;
   activeView: SidePanelView;
+  hasRouteSelection?: boolean;
   showCollapseButton?: boolean;
   onCollapseRail?: () => void;
-  onToggleSearch: () => void;
-  onOpenMapLayers: () => void;
   onOpenRoute: () => void;
   onOpenMtbFilter: () => void;
   onOpenImbaFilter: () => void;
   onOpenRoutesFilter: () => void;
   onOpenSettings: () => void;
-  onOpenCredits: () => void;
   onOpenAbout: () => void;
-  onOpenCookiePolicy: () => void;
 }> = (props) => {
   const { mtbTrail, mtbBikePark, routes } = AppConfig.layerFilters;
-  const isActive = (view: SidePanelNavView) =>
-    props.open && props.activeView === view;
+  const isActive = (view: SidePanelNavView) => {
+    if (view === "route") {
+      return (
+        props.hasRouteSelection ||
+        (props.open && props.activeView === "route")
+      );
+    }
+    return props.open && props.activeView === view;
+  };
 
   return (
     <div className="side-panel-rail">
@@ -55,18 +54,6 @@ export const SidePanelRail: React.FunctionComponent<{
         </IconButton>
       )}
       <div className="side-panel-rail-main">
-        <IconButton
-          className={railButtonClass(props.searchOpen)}
-          aria-label="Search"
-          aria-pressed={props.searchOpen}
-          title="Search"
-          onClick={props.onToggleSearch}
-        >
-          <SearchIcon sx={RAIL_ICON_SX} />
-        </IconButton>
-
-        <Divider className="side-panel-rail-divider" aria-hidden />
-
         <IconButton
           className={railButtonClass(isActive("routesFilter"))}
           aria-label={`${routes.railLabel} filter`}
@@ -98,7 +85,7 @@ export const SidePanelRail: React.FunctionComponent<{
         </IconButton>
 
         <IconButton
-          className={railButtonClass(isActive("route"))}
+          className={`${railButtonClass(isActive("route"))} side-panel-rail-route-button`}
           aria-label="Route"
           aria-pressed={isActive("route")}
           title="Route"
@@ -106,19 +93,9 @@ export const SidePanelRail: React.FunctionComponent<{
         >
           <RouteIcon sx={RAIL_ICON_SX} />
         </IconButton>
+      </div>
 
-        <Divider className="side-panel-rail-divider" aria-hidden />
-
-        <IconButton
-          className={railButtonClass(isActive("mapLayers"))}
-          aria-label="Map layers"
-          aria-pressed={isActive("mapLayers")}
-          title="Map layers"
-          onClick={props.onOpenMapLayers}
-        >
-          <LayersIcon sx={RAIL_ICON_SX} />
-        </IconButton>
-
+      <div className="side-panel-rail-bottom">
         <IconButton
           className={railButtonClass(isActive("settings"))}
           aria-label="Settings"
@@ -127,28 +104,6 @@ export const SidePanelRail: React.FunctionComponent<{
           onClick={props.onOpenSettings}
         >
           <SettingsIcon sx={RAIL_ICON_SX} />
-        </IconButton>
-      </div>
-
-      <div className="side-panel-rail-bottom">
-        <IconButton
-          className={railButtonClass(isActive("cookiePolicy"))}
-          aria-label="Cookie policy"
-          aria-pressed={isActive("cookiePolicy")}
-          title="Cookie policy"
-          onClick={props.onOpenCookiePolicy}
-        >
-          <CookieIcon sx={RAIL_ICON_SX} />
-        </IconButton>
-
-        <IconButton
-          className={railButtonClass(isActive("credits"))}
-          aria-label="Credits"
-          aria-pressed={isActive("credits")}
-          title="Credits"
-          onClick={props.onOpenCredits}
-        >
-          <PolicyIcon sx={RAIL_ICON_SX} />
         </IconButton>
 
         <IconButton

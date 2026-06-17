@@ -12,6 +12,9 @@ export const AppConfig = {
 
   appName: "OpenBikeMap.org",
 
+  /** Shorter brand label in side-panel chrome (no domain suffix). */
+  panelTitle: "OpenBikeMap",
+
   appDomain: "openbikemap.org",
 
   tagline:

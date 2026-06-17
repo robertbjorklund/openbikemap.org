@@ -47,10 +47,6 @@ export default interface EventBus {
 
   closeMenu(): void;
 
-  backToLayers(): void;
-
-  openMapLayers(): void;
-
   openMtbFilter(): void;
 
   openImbaFilter(): void;
@@ -62,10 +58,6 @@ export default interface EventBus {
   closeRoutePanel(): void;
 
   openSettings(): void;
-
-  openCredits(): void;
-
-  openCookiePolicy(): void;
 
   openAboutInfo(): void;
 
@@ -108,6 +100,9 @@ export default interface EventBus {
   showRouteGroupOverview(): void;
 
   hideInfo(): void;
+
+  /** Close the detail panel but keep the map selection and route rail indicator. */
+  collapseInfoPanel(): void;
 
   addMarker(marker: MapMarker): void;
 

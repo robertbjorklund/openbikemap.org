@@ -299,6 +299,138 @@ body {
   .side-panel-rail-divider {
     width: 32px;
   }
+
+  .side-panel.side-panel-open {
+    max-width: min(var(--side-panel-width, 480px), 100vw);
+  }
+
+  .side-panel.side-panel-open.side-panel-rail-collapsed {
+    width: min(var(--side-panel-content-width, 252px), 72vw);
+    max-width: 72vw;
+  }
+
+  .info-panel-actions {
+    justify-content: center;
+    width: 100%;
+    gap: 6px;
+  }
+
+  .side-panel-rail-collapsed .panel-context-title {
+    flex: unset;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .panel-action-button {
+    min-width: 40px;
+    width: 40px;
+    padding: 0;
+  }
+
+  .panel-action-button-label {
+    display: none;
+  }
+
+  .panel-action-button .MuiButton-startIcon {
+    margin: 0;
+  }
+
+  .side-panel-rail-route-button {
+    display: none;
+  }
+
+  .side-panel.side-panel-route-host {
+    width: var(--side-panel-rail-width, 56px) !important;
+    max-width: var(--side-panel-rail-width, 56px);
+    box-shadow: 2px 0 6px rgba(0, 0, 0, 0.12);
+  }
+
+  .side-panel.side-panel-route-host.side-panel-rail-collapsed {
+    width: 0 !important;
+    max-width: 0;
+    box-shadow: none;
+    pointer-events: none;
+  }
+
+  .side-panel.side-panel-route-host .side-panel-rail {
+    height: 100%;
+  }
+
+  .route-bottom-sheet {
+    position: fixed;
+    left: var(--side-panel-rail-width, 56px);
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    max-height: var(--route-bottom-sheet-height, 42vh);
+    pointer-events: auto;
+    animation: route-bottom-sheet-in 0.28s ease-out;
+    transition: transform 0.25s ease-out;
+  }
+
+  .route-bottom-sheet .side-panel-inner {
+    flex: 1;
+    min-height: 0;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.18) !important;
+    overflow: hidden;
+  }
+
+  .route-bottom-sheet .panel-shell-body {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .route-bottom-sheet .info-panel-actions {
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: nowrap;
+    width: 100%;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  .route-bottom-sheet .panel-action-button {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+    max-width: none;
+    padding: 6px 10px;
+  }
+
+  .route-bottom-sheet .panel-action-button-label {
+    display: inline;
+  }
+
+  .route-bottom-sheet .panel-action-button .MuiButton-startIcon {
+    margin: 0 6px 0 0;
+  }
+
+  .route-bottom-sheet .route-mobile-header {
+    gap: 6px;
+  }
+
+  .route-bottom-sheet.route-bottom-sheet-collapsed {
+    transform: translateY(calc(100% - 56px));
+  }
+
+  .route-bottom-sheet.route-bottom-sheet-collapsed
+    .side-panel-inner
+    > :not(.panel-shell-top-bar) {
+    display: none;
+  }
+}
+
+@keyframes route-bottom-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
 .openbikemap-filter-menu-inner {
@@ -400,6 +532,7 @@ body {
 .side-panel.side-panel-open {
   width: min(var(--side-panel-width, 480px), 100vw);
   box-shadow: 4px 0 12px rgba(0, 0, 0, 0.18);
+  z-index: 5;
 }
 
 .side-panel:not(.side-panel-open).side-panel-rail-collapsed {
@@ -500,6 +633,7 @@ body {
 }
 
 .side-panel-rail-button {
+  position: relative;
   width: 48px;
   height: 48px;
   border-radius: 10px;
@@ -508,6 +642,19 @@ body {
 .side-panel-rail-button-active {
   background: var(--app-primary-soft, #e0f2f4);
   color: var(--app-primary, #007b8b);
+}
+
+.side-panel-rail-button-active::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * (var(--side-panel-rail-width, 80px) - 48px) / 2);
+  top: 50%;
+  width: 3px;
+  height: 28px;
+  border-radius: 0 2px 2px 0;
+  background: var(--app-primary, #007b8b);
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 
 .side-panel-content {
@@ -525,11 +672,64 @@ body {
   box-shadow: none !important;
 }
 
+.overflow-scroll-text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.overflow-scroll-text-inner {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+@media (hover: hover) {
+  .overflow-scroll-text--overflows:hover .overflow-scroll-text-inner {
+    animation: overflow-scroll-text-marquee 5s ease-in-out infinite alternate;
+  }
+}
+
+@media (hover: none) {
+  .overflow-scroll-text--overflows {
+    cursor: pointer;
+  }
+
+  .overflow-scroll-text--overflows.overflow-scroll-text--active
+    .overflow-scroll-text-inner {
+    animation: overflow-scroll-text-marquee 5s ease-in-out infinite alternate;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overflow-scroll-text--overflows:hover .overflow-scroll-text-inner,
+  .overflow-scroll-text--overflows.overflow-scroll-text--active
+    .overflow-scroll-text-inner {
+    animation: none;
+  }
+
+  .overflow-scroll-text--overflows.overflow-scroll-text--active
+    .overflow-scroll-text-inner {
+    transform: translateX(calc(-1 * var(--overflow-scroll-distance, 0px)));
+  }
+}
+
+@keyframes overflow-scroll-text-marquee {
+  0%,
+  15% {
+    transform: translateX(0);
+  }
+
+  85%,
+  100% {
+    transform: translateX(calc(-1 * var(--overflow-scroll-distance, 0px)));
+  }
+}
+
 .openbikemap-search-box {
   position: fixed;
   top: calc(var(--beta-banner-height, 0px) + 12px);
   left: calc(var(--side-panel-rail-width, 80px) + 12px);
-  z-index: 4;
+  z-index: 3;
   width: min(360px, calc(100vw - var(--side-panel-rail-width, 80px) - 24px));
   pointer-events: auto;
 }

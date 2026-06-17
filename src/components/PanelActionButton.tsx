@@ -13,6 +13,7 @@ export const PanelActionButton: React.FunctionComponent<{
 
   return (
     <Button
+      className="panel-action-button"
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
@@ -27,7 +28,7 @@ export const PanelActionButton: React.FunctionComponent<{
         : {})}
       sx={ctaButtonSx}
     >
-      {label}
+      <span className="panel-action-button-label">{label}</span>
     </Button>
   );
 };

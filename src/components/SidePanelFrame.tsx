@@ -13,69 +13,73 @@ import type { SidePanelView } from "./SidePanelView";
 export const SidePanelFrame: React.FunctionComponent<
   React.PropsWithChildren<{
     open: boolean;
-    searchOpen: boolean;
     activeView: SidePanelView;
+    hasRouteSelection?: boolean;
+    routeBottomSheetOpen?: boolean;
+    routeBottomSheetCollapsed?: boolean;
+    routeBottomSheetContent?: React.ReactNode;
     railExpanded: boolean;
     railCollapsible: boolean;
     eventBus: EventBus;
-    onToggleSearch: () => void;
-    onCloseSearch: () => void;
     onExpandRail: () => void;
     onCollapseRail: () => void;
   }>
 > = (props) => {
-  const withSearchClosed = (action: () => void) => () => {
-    if (props.searchOpen) {
-      props.onCloseSearch();
-    }
-    action();
-  };
-
   const railCollapsed = props.railCollapsible && !props.railExpanded;
+  const routeBottomSheetOpen = props.routeBottomSheetOpen ?? false;
+  const routeBottomSheetCollapsed = props.routeBottomSheetCollapsed ?? false;
+  const routeHostOnly =
+    routeBottomSheetOpen && props.activeView === "route";
+  const showFlyoutContent =
+    props.open && (!routeBottomSheetOpen || props.activeView !== "route");
   const panelClassName = [
     "side-panel",
-    props.open ? "side-panel-open" : "",
+    props.open || routeBottomSheetOpen ? "side-panel-open" : "",
     railCollapsed ? "side-panel-rail-collapsed" : "",
+    routeHostOnly ? "side-panel-route-host" : "",
   ]
     .filter(Boolean)
     .join(" ");
 
   return (
     <>
+      <SearchBox eventBus={props.eventBus} />
+
       {railCollapsed && (
         <SidePanelRailExpandTab onExpand={props.onExpandRail} />
       )}
 
       <div className={panelClassName}>
         <SidePanelRail
-          open={props.open}
-          searchOpen={props.searchOpen}
+          open={props.open || routeBottomSheetOpen}
           activeView={props.activeView}
+          hasRouteSelection={props.hasRouteSelection ?? false}
           showCollapseButton={props.railCollapsible && props.railExpanded}
           onCollapseRail={props.onCollapseRail}
-          onToggleSearch={props.onToggleSearch}
-          onOpenMapLayers={withSearchClosed(() => props.eventBus.openMapLayers())}
-          onOpenRoute={withSearchClosed(() => props.eventBus.openRoute())}
-          onOpenMtbFilter={withSearchClosed(() => props.eventBus.openMtbFilter())}
-          onOpenImbaFilter={withSearchClosed(() => props.eventBus.openImbaFilter())}
-          onOpenRoutesFilter={withSearchClosed(() =>
-            props.eventBus.openRoutesFilter(),
-          )}
-          onOpenSettings={withSearchClosed(() => props.eventBus.openSettings())}
-          onOpenCredits={withSearchClosed(() => props.eventBus.openCredits())}
-          onOpenAbout={withSearchClosed(() => props.eventBus.openAboutInfo())}
-          onOpenCookiePolicy={withSearchClosed(() =>
-            props.eventBus.openCookiePolicy(),
-          )}
+          onOpenRoute={() => props.eventBus.openRoute()}
+          onOpenMtbFilter={() => props.eventBus.openMtbFilter()}
+          onOpenImbaFilter={() => props.eventBus.openImbaFilter()}
+          onOpenRoutesFilter={() => props.eventBus.openRoutesFilter()}
+          onOpenSettings={() => props.eventBus.openSettings()}
+          onOpenAbout={() => props.eventBus.openAboutInfo()}
         />
 
-        {props.open && (
+        {showFlyoutContent && (
           <div className="side-panel-content">{props.children}</div>
         )}
       </div>
 
-      {props.searchOpen && (
-        <SearchBox eventBus={props.eventBus} onClose={props.onToggleSearch} />
+      {routeBottomSheetOpen && props.routeBottomSheetContent != null && (
+        <div
+          className={[
+            "route-bottom-sheet",
+            routeBottomSheetCollapsed ? "route-bottom-sheet-collapsed" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          {props.routeBottomSheetContent}
+        </div>
       )}
     </>
   );

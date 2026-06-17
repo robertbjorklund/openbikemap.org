@@ -16,6 +16,7 @@ export const MtbFilterPanel: React.FunctionComponent<{
     <PanelShell
       title={panelTitle}
       subtitle="Single Track Scale — European off-road trail difficulty (S0–S6)."
+      showBack={false}
       actions={
         <Switch
           checked={props.mapFilters.showMtbSts}

@@ -18,6 +18,7 @@ export const SettingsPanel: React.FunctionComponent<{
   return (
     <PanelShell
       title="Settings"
+      showBack={false}
       onClose={() => props.eventBus.closeMenu()}
     >
       <Typography variant="subtitle1" sx={{ mb: 1 }}>

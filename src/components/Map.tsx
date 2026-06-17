@@ -6,7 +6,10 @@ import { MAP_STYLE_URLS, MapStyle } from "../MapStyle";
 import { FeatureType, type MapFeature } from "../types/FeatureTypes";
 import { featuresForHighlight } from "../utils/FeatureGroup";
 import { findRouteStageFeature } from "../utils/routeGroupSelection";
-import { panMapIfClickUnderSidePanelFlyout } from "../utils/mapInfoPanelFocus";
+import {
+  featureFocusLngLat,
+  panMapToCenterFeatureInVisibleArea,
+} from "../utils/mapInfoPanelFocus";
 import { formatRouteStageTooltip } from "../utils/RouteStage";
 import {
   CameraPosition,
@@ -234,7 +237,6 @@ export class Map {
     this.sidePanelControl = new SidePanelControl(
       eventBus,
       this.currentFilters,
-      MapStyle.Terrain,
     );
     this.map.addControl(this.sidePanelControl);
 
@@ -381,20 +383,17 @@ export class Map {
     this.filterControl.setMapStyle(state.mapStyle);
     const viewOptions: {
       mapFilters: MapFilters;
-      mapStyle: MapStyle;
       infoFeature?: MapFeature | null;
       routeGroup?: RouteGroupSelection | null;
+      hasRouteSelection?: boolean;
+      routeDetailsExpanded?: boolean;
     } = {
       mapFilters: state.mapFilters,
-      mapStyle: state.mapStyle,
     };
-    if (state.sidePanelView === "route") {
-      viewOptions.infoFeature = state.selectedObject?.feature ?? null;
-      viewOptions.routeGroup = state.selectedObject?.routeGroup ?? null;
-    } else {
-      viewOptions.infoFeature = null;
-      viewOptions.routeGroup = null;
-    }
+    viewOptions.infoFeature = state.selectedObject?.feature ?? null;
+    viewOptions.routeGroup = state.selectedObject?.routeGroup ?? null;
+    viewOptions.hasRouteSelection = state.selectedObject != null;
+    viewOptions.routeDetailsExpanded = state.selectedObject?.showInfo ?? true;
     this.sidePanelControl.setView(state.sidePanelView, viewOptions);
   }
 
@@ -402,10 +401,7 @@ export class Map {
     this.routeGroupSelection = selectedObject?.routeGroup ?? null;
     this.hoveredStageId = null;
     this.hideStageTooltip();
-    const feature =
-      selectedObject?.showInfo && selectedObject.feature
-        ? selectedObject.feature
-        : null;
+    const feature = selectedObject?.feature ?? null;
     this.selectedFeature = feature;
     this.updateSelectedHighlight();
     this.focusMapForInfoPanel(selectedObject);
@@ -426,9 +422,15 @@ export class Map {
     }
 
     this.infoPanFeatureId = selectedObject.id;
-    panMapIfClickUnderSidePanelFlyout(
+
+    const lngLat =
+      (selectedObject.feature &&
+        featureFocusLngLat(selectedObject.feature)) ||
+      selectedObject.pan.lngLat;
+
+    panMapToCenterFeatureInVisibleArea(
       this.map,
-      selectedObject.pan.clickX,
+      lngLat,
       selectedObject.pan.animate,
     );
   }

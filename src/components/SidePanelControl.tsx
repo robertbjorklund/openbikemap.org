@@ -4,15 +4,9 @@ import * as ReactDOM from "react-dom/client";
 
 import MapFilters from "../MapFilters";
 
-import { MapStyle } from "../MapStyle";
-
 import type { MapFeature } from "../types/FeatureTypes";
 
 import { AboutPanel } from "./AboutPanel";
-
-import { CookiePolicyPanel } from "./CookiePolicyPanel";
-
-import { CreditsPanel } from "./CreditsPanel";
 
 import EventBus from "./EventBus";
 
@@ -23,8 +17,6 @@ import { MtbFilterPanel } from "./MtbFilterPanel";
 import { RoutesFilterPanel } from "./RoutesFilterPanel";
 
 import { RoutePanel } from "./RoutePanel";
-
-import { MapLayersPanel } from "./MapLayersPanel";
 
 import { SettingsPanel } from "./SettingsPanel";
 
@@ -37,17 +29,21 @@ import type { RouteGroupSelection } from "./SelectedObject";
 import { Themed } from "./Themed";
 
 import {
+  getSidePanelFlyoutContentWidth,
   getSidePanelRailExpanded,
   getSidePanelRailWidth,
+  getRouteBottomSheetHeightPx,
+  isMobileRouteBottomSheetActive,
   isSidePanelRailCollapsible,
   setSidePanelRailExpanded,
+  SIDE_PANEL_CONTENT_WIDTH_DESKTOP,
   SIDE_PANEL_RAIL_WIDTH,
 } from "./sidePanelRailLayout";
 
 export { SIDE_PANEL_RAIL_WIDTH };
 
-/** Fly-out panel content width; total open width includes the rail. */
-export const SIDE_PANEL_CONTENT_WIDTH = 400;
+/** Fly-out panel content width on desktop; use getSidePanelFlyoutContentWidth on mobile. */
+export const SIDE_PANEL_CONTENT_WIDTH = SIDE_PANEL_CONTENT_WIDTH_DESKTOP;
 
 export const SIDE_PANEL_WIDTH =
   SIDE_PANEL_RAIL_WIDTH + SIDE_PANEL_CONTENT_WIDTH;
@@ -66,15 +62,14 @@ export class SidePanelControl implements maplibregl.IControl {
 
   private view: SidePanelView = null;
 
-  private searchOpen = false;
-
-  private mapStyle: MapStyle;
-
   private mapFilters: MapFilters;
 
   private infoFeature: MapFeature | null = null;
 
   private routeGroup: RouteGroupSelection | null = null;
+
+  private hasRouteSelection = false;
+  private routeDetailsExpanded = true;
 
   private railExpanded = getSidePanelRailExpanded();
 
@@ -90,10 +85,8 @@ export class SidePanelControl implements maplibregl.IControl {
   constructor(
     private eventBus: EventBus,
     mapFilters: MapFilters,
-    mapStyle: MapStyle,
   ) {
     this.mapFilters = mapFilters;
-    this.mapStyle = mapStyle;
     this.panel = document.createElement("div");
     this.placeholder = document.createElement("div");
     this.placeholder.style.display = "none";
@@ -136,6 +129,7 @@ export class SidePanelControl implements maplibregl.IControl {
     this.map?.getContainer().style.removeProperty("--side-panel-rail-width");
     this.map?.getContainer().style.removeProperty("--side-panel-width");
     this.map?.getContainer().style.removeProperty("--side-panel-content-width");
+    this.map?.getContainer().style.removeProperty("--route-bottom-sheet-height");
 
     this.map = null;
 
@@ -162,9 +156,10 @@ export class SidePanelControl implements maplibregl.IControl {
     view: SidePanelView,
     options?: {
       mapFilters?: MapFilters;
-      mapStyle?: MapStyle;
       infoFeature?: MapFeature | null;
       routeGroup?: RouteGroupSelection | null;
+      hasRouteSelection?: boolean;
+      routeDetailsExpanded?: boolean;
     },
   ) => {
     this.view = view;
@@ -173,47 +168,23 @@ export class SidePanelControl implements maplibregl.IControl {
       this.mapFilters = options.mapFilters;
     }
 
-    if (options?.mapStyle) {
-      this.mapStyle = options.mapStyle;
-    }
-
     if (options?.infoFeature !== undefined) {
-      if (options.infoFeature !== null || view !== "route") {
-        this.infoFeature = options.infoFeature;
-      }
+      this.infoFeature = options.infoFeature;
     }
 
     if (options?.routeGroup !== undefined) {
-      if (options.routeGroup !== null || view !== "route") {
-        this.routeGroup = options.routeGroup;
-      }
+      this.routeGroup = options.routeGroup;
     }
 
-    this.render();
-
-  };
-
-
-
-  private closeSearch = () => {
-    if (!this.searchOpen) {
-      return;
+    if (options?.hasRouteSelection !== undefined) {
+      this.hasRouteSelection = options.hasRouteSelection;
     }
-    this.searchOpen = false;
-    this.render();
-  };
-
-  private handleToggleSearch = () => {
-    const willOpen = !this.searchOpen;
-    if (willOpen && this.view !== null) {
-      if (this.view === "route") {
-        this.eventBus.hideInfo();
-      } else {
-        this.eventBus.closeMenu();
-      }
-      this.view = null;
+    if (options?.routeDetailsExpanded !== undefined) {
+      this.routeDetailsExpanded = options.routeDetailsExpanded;
     }
-    this.searchOpen = !this.searchOpen;
+
+    this.updatePanelWidth();
+    this.map?.resize();
     this.render();
   };
 
@@ -233,21 +204,48 @@ export class SidePanelControl implements maplibregl.IControl {
     this.render();
   };
 
-  /** Reserve rail width only; expanded panel content overlays the map. */
+  /** Reserve rail width when closed; rail + content when a panel is open. */
   private updatePanelWidth = () => {
     const container = this.map?.getContainer();
     if (!container) {
       return;
     }
-    const railWidth = getSidePanelRailWidth();
-    const contentWidth = SIDE_PANEL_CONTENT_WIDTH;
+    const mapWidth = container.clientWidth;
+    const mapHeight = container.clientHeight;
+    const railWidth = getSidePanelRailWidth(mapWidth);
+    const contentWidth = getSidePanelFlyoutContentWidth(mapWidth);
+    const mobileRouteBottomSheet = isMobileRouteBottomSheetActive(
+      this.hasRouteSelection,
+      mapWidth,
+    );
+    const routePanelCollapsed = mobileRouteBottomSheet && !this.routeDetailsExpanded;
+    const bottomSheetHeight = mobileRouteBottomSheet
+      ? routePanelCollapsed
+        ? 56
+        : getRouteBottomSheetHeightPx(mapHeight)
+      : 0;
+
     container.style.setProperty("--side-panel-rail-width", `${railWidth}px`);
     container.style.setProperty(
       "--side-panel-content-width",
       `${contentWidth}px`,
     );
-    const openWidth =
-      railWidth > 0 ? railWidth + contentWidth : contentWidth;
+    container.style.setProperty(
+      "--route-bottom-sheet-height",
+      `${bottomSheetHeight}px`,
+    );
+
+    const routeOnlyMobileSheet =
+      mobileRouteBottomSheet && this.view === "route";
+    const flyoutPanelOpen = this.view !== null && !routeOnlyMobileSheet;
+
+    const openWidth = flyoutPanelOpen
+      ? railWidth > 0
+        ? railWidth + contentWidth
+        : contentWidth
+      : mobileRouteBottomSheet
+        ? railWidth
+        : railWidth;
     container.style.setProperty("--side-panel-width", `${openWidth}px`);
   };
 
@@ -268,19 +266,27 @@ export class SidePanelControl implements maplibregl.IControl {
     this.updatePanelWidth();
 
     const open = this.view !== null;
+    const mobileRouteBottomSheet = isMobileRouteBottomSheetActive(
+      this.hasRouteSelection,
+    );
+    const routeBottomSheetOpen = mobileRouteBottomSheet;
+    const routeBottomSheetCollapsed =
+      routeBottomSheetOpen && !this.routeDetailsExpanded;
+
+    const routePanel = this.hasRouteSelection ? (
+      <RoutePanel
+        feature={this.infoFeature}
+        routeGroup={this.routeGroup ?? undefined}
+        eventBus={this.eventBus}
+        routeDetailsExpanded={this.routeDetailsExpanded}
+        map={this.map ?? undefined}
+      />
+    ) : null;
 
     let content: React.ReactNode = null;
+    let routeBottomSheetContent: React.ReactNode = null;
 
-
-
-    if (this.view === "mapLayers") {
-      content = (
-        <MapLayersPanel
-          eventBus={this.eventBus}
-          mapStyle={this.mapStyle}
-        />
-      );
-    } else if (this.view === "mtbFilter") {
+    if (this.view === "mtbFilter") {
       content = (
         <MtbFilterPanel eventBus={this.eventBus} mapFilters={this.mapFilters} />
       );
@@ -299,27 +305,16 @@ export class SidePanelControl implements maplibregl.IControl {
 
       content = <SettingsPanel eventBus={this.eventBus} />;
 
-    } else if (this.view === "credits") {
-
-      content = <CreditsPanel eventBus={this.eventBus} />;
-
     } else if (this.view === "about") {
 
       content = <AboutPanel eventBus={this.eventBus} />;
 
-    } else if (this.view === "cookiePolicy") {
+    } else if (this.view === "route" && !routeBottomSheetOpen) {
+      content = routePanel;
+    }
 
-      content = <CookiePolicyPanel eventBus={this.eventBus} />;
-
-    } else if (this.view === "route") {
-      content = (
-        <RoutePanel
-          feature={this.infoFeature}
-          routeGroup={this.routeGroup ?? undefined}
-          eventBus={this.eventBus}
-          map={this.map ?? undefined}
-        />
-      );
+    if (routeBottomSheetOpen && routePanel) {
+      routeBottomSheetContent = routePanel;
     }
 
 
@@ -330,13 +325,14 @@ export class SidePanelControl implements maplibregl.IControl {
 
         <SidePanelFrame
           open={open}
-          searchOpen={this.searchOpen}
           activeView={this.view}
+          hasRouteSelection={this.hasRouteSelection}
+          routeBottomSheetOpen={routeBottomSheetOpen}
+          routeBottomSheetCollapsed={routeBottomSheetCollapsed}
+          routeBottomSheetContent={routeBottomSheetContent}
           railExpanded={this.railExpanded}
           railCollapsible={isSidePanelRailCollapsible()}
           eventBus={this.eventBus}
-          onToggleSearch={this.handleToggleSearch}
-          onCloseSearch={this.closeSearch}
           onExpandRail={this.handleExpandRail}
           onCollapseRail={this.handleCollapseRail}
         >

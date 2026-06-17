@@ -1,8 +1,6 @@
-import CloseIcon from "@mui/icons-material/Close";
 import SearchIcon from "@mui/icons-material/Search";
 import {
   Divider,
-  IconButton,
   InputBase,
   List,
   ListItemButton,
@@ -25,7 +23,6 @@ type SearchResult = CommandResult | LocationResult;
 
 export const SearchBox: React.FunctionComponent<{
   eventBus: EventBus;
-  onClose: () => void;
 }> = (props) => {
   const [query, setQuery] = React.useState("");
   const [results, setResults] = React.useState<SearchResult[]>([]);
@@ -35,10 +32,6 @@ export const SearchBox: React.FunctionComponent<{
   const containerRef = React.useRef<HTMLDivElement>(null);
   const queryRef = React.useRef(query);
   queryRef.current = query;
-
-  React.useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
 
   React.useEffect(() => {
     const onMouseDown = (event: MouseEvent) => {
@@ -125,7 +118,7 @@ export const SearchBox: React.FunctionComponent<{
     setQuery("");
     setResults([]);
     setHideResults(true);
-    props.onClose();
+    inputRef.current?.blur();
 
     if (result.type === "add_marker") {
       trackMatomoEvent("Search", "Select", "coordinates");
@@ -149,7 +142,8 @@ export const SearchBox: React.FunctionComponent<{
     } else if (event.key === "Enter" && results.length > 0) {
       selectResult(results[selectedIndex]);
     } else if (event.key === "Escape") {
-      props.onClose();
+      setHideResults(true);
+      inputRef.current?.blur();
     }
   };
 
@@ -167,14 +161,6 @@ export const SearchBox: React.FunctionComponent<{
           sx={{ ml: 1, flex: 1, minWidth: 0 }}
           inputProps={{ "aria-label": "Search trails and routes" }}
         />
-        <IconButton
-          size="small"
-          aria-label="Close search"
-          onClick={props.onClose}
-          sx={{ mr: 0.5 }}
-        >
-          <CloseIcon fontSize="small" />
-        </IconButton>
       </Paper>
 
       {results.length > 0 && !hideResults && (
