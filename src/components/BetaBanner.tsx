@@ -29,8 +29,8 @@ export const BetaBanner: React.FunctionComponent = () => {
     <>
       <div className="beta-banner" role="status">
         <span className="beta-banner-text">
-          <strong>{AppConfig.appName}</strong> is in beta — help us improve the
-          map.
+          <strong>{AppConfig.appName}</strong> is in beta — currently covering
+          Sweden. Help us improve the map.
         </span>
         <Button
           className="beta-banner-feedback-button"
