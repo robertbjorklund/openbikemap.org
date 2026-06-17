@@ -29,6 +29,7 @@ import type { RouteGroupSelection } from "./SelectedObject";
 import { Themed } from "./Themed";
 
 import {
+  getLayoutViewportWidth,
   getSidePanelFlyoutContentWidth,
   getSidePanelRailExpanded,
   getSidePanelRailWidth,
@@ -210,13 +211,13 @@ export class SidePanelControl implements maplibregl.IControl {
     if (!container) {
       return;
     }
-    const mapWidth = container.clientWidth;
     const mapHeight = container.clientHeight;
-    const railWidth = getSidePanelRailWidth(mapWidth);
-    const contentWidth = getSidePanelFlyoutContentWidth(mapWidth);
+    const viewportWidth = getLayoutViewportWidth();
+    const railWidth = getSidePanelRailWidth(viewportWidth);
+    const contentWidth = getSidePanelFlyoutContentWidth(viewportWidth);
     const mobileRouteBottomSheet = isMobileRouteBottomSheetActive(
       this.hasRouteSelection,
-      mapWidth,
+      viewportWidth,
     );
     const routePanelCollapsed = mobileRouteBottomSheet && !this.routeDetailsExpanded;
     const bottomSheetHeight = mobileRouteBottomSheet
@@ -266,8 +267,10 @@ export class SidePanelControl implements maplibregl.IControl {
     this.updatePanelWidth();
 
     const open = this.view !== null;
+    const viewportWidth = getLayoutViewportWidth();
     const mobileRouteBottomSheet = isMobileRouteBottomSheetActive(
       this.hasRouteSelection,
+      viewportWidth,
     );
     const routeBottomSheetOpen = mobileRouteBottomSheet;
     const routeBottomSheetCollapsed =

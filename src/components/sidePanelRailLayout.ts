@@ -13,6 +13,14 @@ export const ROUTE_BOTTOM_SHEET_HEIGHT_RATIO = 0.42;
 
 const STORAGE_KEY = "sidePanelRailExpanded";
 
+/** Viewport width for layout breakpoints — must match CSS media queries, not map container width. */
+export function getLayoutViewportWidth(): number {
+  if (typeof window === "undefined") {
+    return SIDE_PANEL_RAIL_WIDTH_DESKTOP;
+  }
+  return window.innerWidth;
+}
+
 /** Mobile route detail panel at the bottom while a feature stays selected on the map. */
 export function isMobileRouteBottomSheetActive(
   hasRouteSelection: boolean,
@@ -121,11 +129,12 @@ export function getSidePanelFlyoutContentWidth(
 
 /** Content overlay width in map-container pixels (excludes the icon rail). */
 export function sidePanelFlyoutWidthPx(mapContainer: HTMLElement): number {
-  const railWidth = getSidePanelRailWidth(mapContainer.clientWidth);
-  const contentWidth = getSidePanelFlyoutContentWidth(mapContainer.clientWidth);
+  const viewportWidth = getLayoutViewportWidth();
+  const railWidth = getSidePanelRailWidth(viewportWidth);
+  const contentWidth = getSidePanelFlyoutContentWidth(viewportWidth);
   const openPanelWidth = Math.min(
     railWidth + contentWidth,
-    mapContainer.clientWidth,
+    mapContainer.clientWidth + railWidth,
   );
   return Math.max(0, openPanelWidth - railWidth);
 }

@@ -1,5 +1,6 @@
 import type * as maplibregl from "maplibre-gl";
 import {
+  getLayoutViewportWidth,
   isRouteBottomSheetMode,
   isSidePanelRailCollapsible,
   readRouteBottomSheetHeightPx,
@@ -56,7 +57,7 @@ export function panMapToCenterFeatureInVisibleArea(
   const mapWidth = mapContainer.clientWidth;
   const mapHeight = mapContainer.clientHeight;
 
-  if (!isSidePanelRailCollapsible(mapWidth)) {
+  if (!isSidePanelRailCollapsible(getLayoutViewportWidth())) {
     return false;
   }
 
