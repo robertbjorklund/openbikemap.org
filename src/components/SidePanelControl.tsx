@@ -276,7 +276,8 @@ export class SidePanelControl implements maplibregl.IControl {
     const routeBottomSheetCollapsed =
       routeBottomSheetOpen && !this.routeDetailsExpanded;
 
-    const routePanel = this.hasRouteSelection ? (
+    const showRoutePanel = this.view === "route" || this.hasRouteSelection;
+    const routePanel = showRoutePanel ? (
       <RoutePanel
         feature={this.infoFeature}
         routeGroup={this.routeGroup ?? undefined}
