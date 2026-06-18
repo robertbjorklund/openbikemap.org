@@ -3,8 +3,7 @@ export type SidePanelView =
   | "imbaFilter"
   | "routesFilter"
   | "route"
-  | "settings"
-  | "about"
+  | "app"
   | null;
 
 export type SidePanelNavView = Exclude<SidePanelView, null>;

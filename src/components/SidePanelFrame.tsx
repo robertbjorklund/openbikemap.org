@@ -2,11 +2,13 @@ import * as React from "react";
 
 import EventBus from "./EventBus";
 
+import { MobileBottomNav } from "./MobileBottomNav";
+
 import { SearchBox } from "./SearchBox";
 
 import { SidePanelRail } from "./SidePanelRail";
 
-import { SidePanelRailExpandTab } from "./SidePanelRailExpandTab";
+import { isMobileLayout } from "./sidePanelRailLayout";
 
 import type { SidePanelView } from "./SidePanelView";
 
@@ -18,24 +20,20 @@ export const SidePanelFrame: React.FunctionComponent<
     routeBottomSheetOpen?: boolean;
     routeBottomSheetCollapsed?: boolean;
     routeBottomSheetContent?: React.ReactNode;
-    railExpanded: boolean;
-    railCollapsible: boolean;
     eventBus: EventBus;
-    onExpandRail: () => void;
-    onCollapseRail: () => void;
   }>
 > = (props) => {
-  const railCollapsed = props.railCollapsible && !props.railExpanded;
+  const mobileLayout = isMobileLayout();
   const routeBottomSheetOpen = props.routeBottomSheetOpen ?? false;
   const routeBottomSheetCollapsed = props.routeBottomSheetCollapsed ?? false;
   const routeHostOnly =
     routeBottomSheetOpen && props.activeView === "route";
   const showFlyoutContent =
     props.open && (!routeBottomSheetOpen || props.activeView !== "route");
+  const showMobileFlyoutSheet = mobileLayout && showFlyoutContent;
   const panelClassName = [
     "side-panel",
     props.open || routeBottomSheetOpen ? "side-panel-open" : "",
-    railCollapsed ? "side-panel-rail-collapsed" : "",
     routeHostOnly ? "side-panel-route-host" : "",
   ]
     .filter(Boolean)
@@ -45,29 +43,39 @@ export const SidePanelFrame: React.FunctionComponent<
     <>
       <SearchBox eventBus={props.eventBus} />
 
-      {railCollapsed && (
-        <SidePanelRailExpandTab onExpand={props.onExpandRail} />
+      {!mobileLayout && (
+        <div className={panelClassName}>
+          <SidePanelRail
+            open={props.open || routeBottomSheetOpen}
+            activeView={props.activeView}
+            hasRouteSelection={props.hasRouteSelection ?? false}
+            onOpenRoute={() => props.eventBus.openRoute()}
+            onOpenMtbFilter={() => props.eventBus.openMtbFilter()}
+            onOpenImbaFilter={() => props.eventBus.openImbaFilter()}
+            onOpenRoutesFilter={() => props.eventBus.openRoutesFilter()}
+            onOpenApp={() => props.eventBus.openSettings()}
+          />
+
+          {showFlyoutContent && (
+            <div className="side-panel-content">{props.children}</div>
+          )}
+        </div>
       )}
 
-      <div className={panelClassName}>
-        <SidePanelRail
+      {showMobileFlyoutSheet && (
+        <div className="mobile-flyout-bottom-sheet">{props.children}</div>
+      )}
+
+      {mobileLayout && (
+        <MobileBottomNav
           open={props.open || routeBottomSheetOpen}
           activeView={props.activeView}
-          hasRouteSelection={props.hasRouteSelection ?? false}
-          showCollapseButton={props.railCollapsible && props.railExpanded}
-          onCollapseRail={props.onCollapseRail}
-          onOpenRoute={() => props.eventBus.openRoute()}
+          onOpenRoutesFilter={() => props.eventBus.openRoutesFilter()}
           onOpenMtbFilter={() => props.eventBus.openMtbFilter()}
           onOpenImbaFilter={() => props.eventBus.openImbaFilter()}
-          onOpenRoutesFilter={() => props.eventBus.openRoutesFilter()}
-          onOpenSettings={() => props.eventBus.openSettings()}
-          onOpenAbout={() => props.eventBus.openAboutInfo()}
+          onOpenApp={() => props.eventBus.openSettings()}
         />
-
-        {showFlyoutContent && (
-          <div className="side-panel-content">{props.children}</div>
-        )}
-      </div>
+      )}
 
       {routeBottomSheetOpen && props.routeBottomSheetContent != null && (
         <div

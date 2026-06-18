@@ -3,7 +3,9 @@ import * as React from "react";
 export const OverflowScrollText: React.FunctionComponent<{
   children: string;
   className?: string;
-}> = ({ children, className }) => {
+  /** On touch devices, start marquee without a tap (e.g. mobile route header). */
+  autoScroll?: boolean;
+}> = ({ children, className, autoScroll = false }) => {
   const containerRef = React.useRef<HTMLSpanElement>(null);
   const textRef = React.useRef<HTMLSpanElement>(null);
   const [overflows, setOverflows] = React.useState(false);
@@ -43,10 +45,19 @@ export const OverflowScrollText: React.FunctionComponent<{
     return () => observer.disconnect();
   }, [measure]);
 
-  const toggleActive = () => {
-    if (overflows) {
-      setActive((prev) => !prev);
+  React.useEffect(() => {
+    if (autoScroll) {
+      setActive(overflows);
+      return;
     }
+    setActive(false);
+  }, [autoScroll, overflows]);
+
+  const toggleActive = () => {
+    if (autoScroll || !overflows) {
+      return;
+    }
+    setActive((prev) => !prev);
   };
 
   return (
@@ -60,16 +71,20 @@ export const OverflowScrollText: React.FunctionComponent<{
       ]
         .filter(Boolean)
         .join(" ")}
-      onClick={toggleActive}
+      onClick={autoScroll ? undefined : toggleActive}
       title={overflows ? children : undefined}
-      role={overflows ? "button" : undefined}
-      tabIndex={overflows ? 0 : undefined}
-      onKeyDown={(event) => {
-        if (overflows && (event.key === "Enter" || event.key === " ")) {
-          event.preventDefault();
-          toggleActive();
-        }
-      }}
+      role={overflows && !autoScroll ? "button" : undefined}
+      tabIndex={overflows && !autoScroll ? 0 : undefined}
+      onKeyDown={
+        autoScroll
+          ? undefined
+          : (event) => {
+              if (overflows && (event.key === "Enter" || event.key === " ")) {
+                event.preventDefault();
+                toggleActive();
+              }
+            }
+      }
     >
       <span ref={textRef} className="overflow-scroll-text-inner">
         {children}

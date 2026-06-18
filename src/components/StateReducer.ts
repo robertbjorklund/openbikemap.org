@@ -24,6 +24,7 @@ import EventBus, { type ShowInfoOptions } from "./EventBus";
 import { isFeatureVisibleUnderFilters } from "./MapFilterRules";
 import { loadGeoJSON } from "./GeoJSONLoader";
 import type { ObjectIDType } from "./SelectedObject";
+import type { AppPanelTab } from "./AppPanelTab";
 import type { SidePanelView } from "./SidePanelView";
 import { isSidePanelRailCollapsible } from "./sidePanelRailLayout";
 import State, { StateChanges } from "./State";
@@ -105,7 +106,7 @@ export default class StateReducer implements EventBus {
   };
 
   openSettings = () => {
-    this.toggleSidePanel("settings");
+    this.openAppPanel("settings");
   };
 
   closeSidebar = () => {
@@ -120,7 +121,17 @@ export default class StateReducer implements EventBus {
   };
 
   openAboutInfo = () => {
-    this.toggleSidePanel("about");
+    this.openAppPanel("about");
+  };
+
+  setAppPanelTab = (tab: AppPanelTab) => {
+    if (this._state.sidePanelView !== "app") {
+      return;
+    }
+    if (this._state.appPanelTab === tab) {
+      return;
+    }
+    this.update({ appPanelTab: tab });
   };
 
   closeAboutInfo = () => {
@@ -500,14 +511,17 @@ export default class StateReducer implements EventBus {
     const showInfo = urlState.selectedObjectID ? urlState.showInfo : false;
 
     let sidePanelView: SidePanelView = null;
+    let appPanelTab: AppPanelTab = this._state.appPanelTab;
     if (urlState.aboutInfoOpen) {
-      sidePanelView = "about";
+      sidePanelView = "app";
+      appPanelTab = "about";
     } else if (showInfo && urlState.selectedObjectID) {
       sidePanelView = "route";
     }
 
     this.update({
       sidePanelView,
+      appPanelTab,
       selectedObject: urlState.selectedObjectID
         ? {
             id: urlState.selectedObjectID,
@@ -529,6 +543,33 @@ export default class StateReducer implements EventBus {
       );
     }
   };
+
+  private openAppPanel(tab: AppPanelTab) {
+    if (
+      this._state.sidePanelView === "app" &&
+      this._state.appPanelTab === tab
+    ) {
+      this.closeMenu();
+      return;
+    }
+
+    const changes: StateChanges = {
+      sidePanelView: "app",
+      appPanelTab: tab,
+    };
+
+    if (
+      isSidePanelRailCollapsible() &&
+      this._state.selectedObject?.showInfo
+    ) {
+      changes.selectedObject = {
+        ...this._state.selectedObject,
+        showInfo: false,
+      };
+    }
+
+    this.update(changes);
+  }
 
   private setSidePanel(view: SidePanelView) {
     this.update({ sidePanelView: view });

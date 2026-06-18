@@ -16,6 +16,8 @@ import type { RouteNetworkFilter } from "../types/RouteNetwork";
 
 import type { MapFeature } from "../types/FeatureTypes";
 
+import type { AppPanelTab } from "./AppPanelTab";
+
 import type { ObjectIDType } from "./SelectedObject";
 
 import type { UnitSystem } from "./utils/UnitHelpers";
@@ -60,6 +62,8 @@ export default interface EventBus {
   openSettings(): void;
 
   openAboutInfo(): void;
+
+  setAppPanelTab(tab: AppPanelTab): void;
 
   closeAboutInfo(): void;
 

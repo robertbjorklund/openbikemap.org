@@ -117,7 +117,9 @@ export const InfoPanel: React.FunctionComponent<{
         component="h2"
         sx={{ fontWeight: 600, flex: 1, minWidth: 0, mb: 0, overflow: "hidden" }}
       >
-        <OverflowScrollText>{featurePanelTitle(props.feature)}</OverflowScrollText>
+        <OverflowScrollText autoScroll>
+          {featurePanelTitle(props.feature)}
+        </OverflowScrollText>
       </Typography>
     </Box>
   ) : undefined;

@@ -6,7 +6,9 @@ import MapFilters from "../MapFilters";
 
 import type { MapFeature } from "../types/FeatureTypes";
 
-import { AboutPanel } from "./AboutPanel";
+import { AppPanel } from "./AppPanel";
+
+import type { AppPanelTab } from "./AppPanelTab";
 
 import EventBus from "./EventBus";
 
@@ -18,8 +20,6 @@ import { RoutesFilterPanel } from "./RoutesFilterPanel";
 
 import { RoutePanel } from "./RoutePanel";
 
-import { SettingsPanel } from "./SettingsPanel";
-
 import { SidePanelFrame } from "./SidePanelFrame";
 
 import type { SidePanelView } from "./SidePanelView";
@@ -30,13 +30,15 @@ import { Themed } from "./Themed";
 
 import {
   getLayoutViewportWidth,
+  getMobileBottomNavHeightPx,
+  getMobileFlyoutBottomInsetPx,
+  getMobileFlyoutBottomSheetHeightPx,
   getSidePanelFlyoutContentWidth,
-  getSidePanelRailExpanded,
   getSidePanelRailWidth,
   getRouteBottomSheetHeightPx,
+  isMobileLayout,
   isMobileRouteBottomSheetActive,
-  isSidePanelRailCollapsible,
-  setSidePanelRailExpanded,
+  ROUTE_BOTTOM_SHEET_COLLAPSED_HEIGHT_PX,
   SIDE_PANEL_CONTENT_WIDTH_DESKTOP,
   SIDE_PANEL_RAIL_WIDTH,
 } from "./sidePanelRailLayout";
@@ -49,10 +51,7 @@ export const SIDE_PANEL_CONTENT_WIDTH = SIDE_PANEL_CONTENT_WIDTH_DESKTOP;
 export const SIDE_PANEL_WIDTH =
   SIDE_PANEL_RAIL_WIDTH + SIDE_PANEL_CONTENT_WIDTH;
 
-
-
 export class SidePanelControl implements maplibregl.IControl {
-
   private panel: HTMLDivElement;
 
   private placeholder: HTMLDivElement;
@@ -63,6 +62,8 @@ export class SidePanelControl implements maplibregl.IControl {
 
   private view: SidePanelView = null;
 
+  private appPanelTab: AppPanelTab = "settings";
+
   private mapFilters: MapFilters;
 
   private infoFeature: MapFeature | null = null;
@@ -72,16 +73,11 @@ export class SidePanelControl implements maplibregl.IControl {
   private hasRouteSelection = false;
   private routeDetailsExpanded = true;
 
-  private railExpanded = getSidePanelRailExpanded();
-
-  private onRailResize = () => {
-    this.railExpanded = getSidePanelRailExpanded();
+  private onLayoutResize = () => {
     this.updatePanelWidth();
     this.map?.resize();
     this.render();
   };
-
-
 
   constructor(
     private eventBus: EventBus,
@@ -93,10 +89,7 @@ export class SidePanelControl implements maplibregl.IControl {
     this.placeholder.style.display = "none";
   }
 
-
-
   onAdd = (map: maplibregl.Map) => {
-
     this.map = map;
 
     this.root = ReactDOM.createRoot(this.panel);
@@ -105,46 +98,39 @@ export class SidePanelControl implements maplibregl.IControl {
 
     this.initRailLayout();
 
-    window.addEventListener("resize", this.onRailResize);
+    window.addEventListener("resize", this.onLayoutResize);
 
     this.render();
 
     return this.placeholder;
-
   };
 
-
-
   onRemove = () => {
-
     this.root?.unmount();
 
     this.root = null;
 
-    window.removeEventListener("resize", this.onRailResize);
+    window.removeEventListener("resize", this.onLayoutResize);
 
     this.panel.remove();
 
     this.placeholder.remove();
 
-    this.map?.getContainer().style.removeProperty("--side-panel-rail-width");
-    this.map?.getContainer().style.removeProperty("--side-panel-width");
-    this.map?.getContainer().style.removeProperty("--side-panel-content-width");
-    this.map?.getContainer().style.removeProperty("--route-bottom-sheet-height");
+    const container = this.map?.getContainer();
+    container?.style.removeProperty("--side-panel-rail-width");
+    container?.style.removeProperty("--side-panel-width");
+    container?.style.removeProperty("--side-panel-content-width");
+    container?.style.removeProperty("--route-bottom-sheet-height");
+    container?.style.removeProperty("--mobile-bottom-nav-height");
+    container?.style.removeProperty("--mobile-flyout-bottom-sheet-height");
+    container?.style.removeProperty("--mobile-flyout-bottom-inset");
 
     this.map = null;
-
   };
-
-
 
   getDefaultPosition = (): maplibregl.ControlPosition => {
-
     return "top-left";
-
   };
-
-
 
   getView = (): SidePanelView => this.view;
 
@@ -161,6 +147,7 @@ export class SidePanelControl implements maplibregl.IControl {
       routeGroup?: RouteGroupSelection | null;
       hasRouteSelection?: boolean;
       routeDetailsExpanded?: boolean;
+      appPanelTab?: AppPanelTab;
     },
   ) => {
     this.view = view;
@@ -183,23 +170,10 @@ export class SidePanelControl implements maplibregl.IControl {
     if (options?.routeDetailsExpanded !== undefined) {
       this.routeDetailsExpanded = options.routeDetailsExpanded;
     }
+    if (options?.appPanelTab !== undefined) {
+      this.appPanelTab = options.appPanelTab;
+    }
 
-    this.updatePanelWidth();
-    this.map?.resize();
-    this.render();
-  };
-
-  private handleExpandRail = () => {
-    setSidePanelRailExpanded(true);
-    this.railExpanded = true;
-    this.updatePanelWidth();
-    this.map?.resize();
-    this.render();
-  };
-
-  private handleCollapseRail = () => {
-    setSidePanelRailExpanded(false);
-    this.railExpanded = false;
     this.updatePanelWidth();
     this.map?.resize();
     this.render();
@@ -213,8 +187,10 @@ export class SidePanelControl implements maplibregl.IControl {
     }
     const mapHeight = container.clientHeight;
     const viewportWidth = getLayoutViewportWidth();
+    const mobileLayout = isMobileLayout(viewportWidth);
     const railWidth = getSidePanelRailWidth(viewportWidth);
     const contentWidth = getSidePanelFlyoutContentWidth(viewportWidth);
+    const bottomNavHeight = getMobileBottomNavHeightPx(viewportWidth);
     const mobileRouteBottomSheet = isMobileRouteBottomSheetActive(
       this.hasRouteSelection,
       viewportWidth,
@@ -222,8 +198,19 @@ export class SidePanelControl implements maplibregl.IControl {
     const routePanelCollapsed = mobileRouteBottomSheet && !this.routeDetailsExpanded;
     const bottomSheetHeight = mobileRouteBottomSheet
       ? routePanelCollapsed
-        ? 56
+        ? ROUTE_BOTTOM_SHEET_COLLAPSED_HEIGHT_PX
         : getRouteBottomSheetHeightPx(mapHeight)
+      : 0;
+
+    const routeOnlyMobileSheet =
+      mobileRouteBottomSheet && this.view === "route";
+    const flyoutPanelOpen = this.view !== null && !routeOnlyMobileSheet;
+    const mobileFlyoutBottomSheet = mobileLayout && flyoutPanelOpen;
+    const flyoutBottomInset = getMobileFlyoutBottomInsetPx(
+      mobileRouteBottomSheet && routePanelCollapsed && mobileFlyoutBottomSheet,
+    );
+    const flyoutBottomSheetHeight = mobileFlyoutBottomSheet
+      ? getMobileFlyoutBottomSheetHeightPx(mapHeight, flyoutBottomInset)
       : 0;
 
     container.style.setProperty("--side-panel-rail-width", `${railWidth}px`);
@@ -235,17 +222,23 @@ export class SidePanelControl implements maplibregl.IControl {
       "--route-bottom-sheet-height",
       `${bottomSheetHeight}px`,
     );
+    container.style.setProperty(
+      "--mobile-bottom-nav-height",
+      `${bottomNavHeight}px`,
+    );
+    container.style.setProperty(
+      "--mobile-flyout-bottom-sheet-height",
+      `${flyoutBottomSheetHeight}px`,
+    );
+    container.style.setProperty(
+      "--mobile-flyout-bottom-inset",
+      `${flyoutBottomInset}px`,
+    );
 
-    const routeOnlyMobileSheet =
-      mobileRouteBottomSheet && this.view === "route";
-    const flyoutPanelOpen = this.view !== null && !routeOnlyMobileSheet;
-
-    const openWidth = flyoutPanelOpen
-      ? railWidth > 0
+    const openWidth = mobileLayout
+      ? 0
+      : flyoutPanelOpen
         ? railWidth + contentWidth
-        : contentWidth
-      : mobileRouteBottomSheet
-        ? railWidth
         : railWidth;
     container.style.setProperty("--side-panel-width", `${openWidth}px`);
   };
@@ -254,14 +247,9 @@ export class SidePanelControl implements maplibregl.IControl {
     this.updatePanelWidth();
   };
 
-
-
   private render = () => {
-
     if (!this.root) {
-
       return;
-
     }
 
     this.updatePanelWidth();
@@ -305,14 +293,14 @@ export class SidePanelControl implements maplibregl.IControl {
           mapFilters={this.mapFilters}
         />
       );
-    } else if (this.view === "settings") {
-
-      content = <SettingsPanel eventBus={this.eventBus} />;
-
-    } else if (this.view === "about") {
-
-      content = <AboutPanel eventBus={this.eventBus} />;
-
+    } else if (this.view === "app") {
+      content = (
+        <AppPanel
+          eventBus={this.eventBus}
+          activeTab={this.appPanelTab}
+          onTabChange={(tab) => this.eventBus.setAppPanelTab(tab)}
+        />
+      );
     } else if (this.view === "route" && !routeBottomSheetOpen) {
       content = routePanel;
     }
@@ -321,12 +309,8 @@ export class SidePanelControl implements maplibregl.IControl {
       routeBottomSheetContent = routePanel;
     }
 
-
-
     this.root.render(
-
       <Themed>
-
         <SidePanelFrame
           open={open}
           activeView={this.view}
@@ -334,20 +318,11 @@ export class SidePanelControl implements maplibregl.IControl {
           routeBottomSheetOpen={routeBottomSheetOpen}
           routeBottomSheetCollapsed={routeBottomSheetCollapsed}
           routeBottomSheetContent={routeBottomSheetContent}
-          railExpanded={this.railExpanded}
-          railCollapsible={isSidePanelRailCollapsible()}
           eventBus={this.eventBus}
-          onExpandRail={this.handleExpandRail}
-          onCollapseRail={this.handleCollapseRail}
         >
           {content}
         </SidePanelFrame>
-
       </Themed>,
-
     );
-
   };
-
 }
-

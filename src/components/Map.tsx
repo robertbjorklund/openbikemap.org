@@ -394,8 +394,10 @@ export class Map {
       routeGroup?: RouteGroupSelection | null;
       hasRouteSelection?: boolean;
       routeDetailsExpanded?: boolean;
+      appPanelTab?: import("./AppPanelTab").AppPanelTab;
     } = {
       mapFilters: state.mapFilters,
+      appPanelTab: state.appPanelTab,
     };
     viewOptions.infoFeature = state.selectedObject?.feature ?? null;
     viewOptions.routeGroup = state.selectedObject?.routeGroup ?? null;

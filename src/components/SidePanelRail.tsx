@@ -1,10 +1,8 @@
-import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import RouteIcon from "@mui/icons-material/Route";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { IconButton } from "@mui/material";
 import * as React from "react";
 import { AppConfig } from "../AppConfig";
-import { AboutRailIcon } from "./icons/AboutRailIcon";
 import { BicycleRouteRailIcon } from "./icons/BicycleRouteRailIcon";
 import { StsRailIcon } from "./icons/StsRailIcon";
 import { ImbaRailIcon } from "./icons/ImbaRailIcon";
@@ -20,14 +18,11 @@ export const SidePanelRail: React.FunctionComponent<{
   open: boolean;
   activeView: SidePanelView;
   hasRouteSelection?: boolean;
-  showCollapseButton?: boolean;
-  onCollapseRail?: () => void;
   onOpenRoute: () => void;
   onOpenMtbFilter: () => void;
   onOpenImbaFilter: () => void;
   onOpenRoutesFilter: () => void;
-  onOpenSettings: () => void;
-  onOpenAbout: () => void;
+  onOpenApp: () => void;
 }> = (props) => {
   const { mtbTrail, mtbBikePark, routes } = AppConfig.layerFilters;
   const isActive = (view: SidePanelNavView) => {
@@ -42,17 +37,6 @@ export const SidePanelRail: React.FunctionComponent<{
 
   return (
     <div className="side-panel-rail">
-      {props.showCollapseButton && props.onCollapseRail && (
-        <IconButton
-          className="side-panel-rail-collapse-button"
-          aria-label="Hide menu"
-          title="Hide menu"
-          onClick={props.onCollapseRail}
-          size="small"
-        >
-          <ChevronLeftIcon sx={{ fontSize: 22 }} />
-        </IconButton>
-      )}
       <div className="side-panel-rail-main">
         <IconButton
           className={railButtonClass(isActive("routesFilter"))}
@@ -97,23 +81,13 @@ export const SidePanelRail: React.FunctionComponent<{
 
       <div className="side-panel-rail-bottom">
         <IconButton
-          className={railButtonClass(isActive("settings"))}
-          aria-label="Settings"
-          aria-pressed={isActive("settings")}
+          className={railButtonClass(isActive("app"))}
+          aria-label="Settings and information"
+          aria-pressed={isActive("app")}
           title="Settings"
-          onClick={props.onOpenSettings}
+          onClick={props.onOpenApp}
         >
           <SettingsIcon sx={RAIL_ICON_SX} />
-        </IconButton>
-
-        <IconButton
-          className={railButtonClass(isActive("about"))}
-          aria-label="About"
-          aria-pressed={isActive("about")}
-          title="About"
-          onClick={props.onOpenAbout}
-        >
-          <AboutRailIcon />
         </IconButton>
       </div>
     </div>

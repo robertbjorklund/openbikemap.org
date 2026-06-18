@@ -57,7 +57,8 @@ function initialize() {
 
   function update(state: State, changes: StateChanges) {
     updateURL({
-      aboutInfoOpen: state.sidePanelView === "about",
+      aboutInfoOpen:
+        state.sidePanelView === "app" && state.appPanelTab === "about",
       selectedObjectID: state.selectedObject?.id ?? null,
       selectedObjectIDType:
         state.selectedObject?.idType ?? AppConfig.defaultObjectIdType,
@@ -72,6 +73,7 @@ function initialize() {
 
     if (
       changes.sidePanelView !== undefined ||
+      changes.appPanelTab !== undefined ||
       changes.selectedObject !== undefined ||
       changes.mapFilters !== undefined ||
       changes.mapStyle !== undefined
@@ -98,11 +100,12 @@ function initialize() {
     if (changes.selectedObject !== undefined) {
       trackAppPageView();
     } else if (
-      changes.sidePanelView !== undefined &&
-      (state.sidePanelView === "about" ||
-        changes.sidePanelView === "about")
+      changes.sidePanelView !== undefined ||
+      changes.appPanelTab !== undefined
     ) {
-      trackAppPageView();
+      if (state.sidePanelView === "app" && state.appPanelTab === "about") {
+        trackAppPageView();
+      }
     }
   }
 

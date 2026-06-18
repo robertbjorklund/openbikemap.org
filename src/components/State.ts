@@ -6,6 +6,7 @@ import { MapStyle } from "../MapStyle";
 
 import { SelectedObject } from "./SelectedObject";
 
+import type { AppPanelTab } from "./AppPanelTab";
 import type { SidePanelView } from "./SidePanelView";
 
 
@@ -13,6 +14,8 @@ import type { SidePanelView } from "./SidePanelView";
 export default interface State {
 
   sidePanelView: SidePanelView;
+
+  appPanelTab: AppPanelTab;
 
   mapStyle: MapStyle;
 
@@ -29,6 +32,8 @@ export default interface State {
 export interface StateChanges {
 
   sidePanelView?: SidePanelView;
+
+  appPanelTab?: AppPanelTab;
 
   mapStyle?: MapStyle;
 
@@ -59,6 +64,8 @@ export function getInitialState(): State {
   return {
 
     sidePanelView: null,
+
+    appPanelTab: "settings",
 
     mapStyle,
 

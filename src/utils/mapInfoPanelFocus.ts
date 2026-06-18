@@ -1,10 +1,11 @@
 import type * as maplibregl from "maplibre-gl";
 import {
   getLayoutViewportWidth,
+  isMobileLayout,
   isRouteBottomSheetMode,
-  isSidePanelRailCollapsible,
+  readMobileBottomNavHeightPx,
+  readMobileFlyoutBottomSheetHeightPx,
   readRouteBottomSheetHeightPx,
-  sidePanelFlyoutWidthPx,
 } from "../components/sidePanelRailLayout";
 import type { MapFeature } from "../types/FeatureTypes";
 
@@ -46,7 +47,7 @@ export function featureFocusLngLat(feature: MapFeature): [number, number] | null
 
 /**
  * On mobile, pan so the selected feature sits in the center of the map area not
- * covered by the route bottom sheet (or the left fly-out on other panels).
+ * covered by a bottom sheet.
  */
 export function panMapToCenterFeatureInVisibleArea(
   map: maplibregl.Map,
@@ -54,44 +55,36 @@ export function panMapToCenterFeatureInVisibleArea(
   animate = true,
 ): boolean {
   const mapContainer = map.getContainer();
-  const mapWidth = mapContainer.clientWidth;
   const mapHeight = mapContainer.clientHeight;
 
-  if (!isSidePanelRailCollapsible(getLayoutViewportWidth())) {
+  if (!isMobileLayout(getLayoutViewportWidth())) {
     return false;
   }
 
-  const bottomSheetHeight = readRouteBottomSheetHeightPx(mapContainer);
-  let panX = 0;
-  let panY = 0;
+  const bottomNavHeight = readMobileBottomNavHeightPx(mapContainer);
+  const bottomOverlayHeight = Math.max(
+    readRouteBottomSheetHeightPx(mapContainer),
+    readMobileFlyoutBottomSheetHeightPx(mapContainer),
+  );
 
-  if (bottomSheetHeight > 0) {
-    const visibleHeight = mapHeight - bottomSheetHeight;
-    if (visibleHeight <= 0) {
-      return false;
-    }
-    const targetY = visibleHeight / 2;
-    const featurePoint = map.project(lngLat);
-    panY = targetY - featurePoint.y;
-  } else {
-    const flyoutWidth = sidePanelFlyoutWidthPx(mapContainer);
-    if (flyoutWidth === 0) {
-      return false;
-    }
-    const visibleWidth = mapWidth - flyoutWidth;
-    if (visibleWidth <= 0) {
-      return false;
-    }
-    const targetX = flyoutWidth + visibleWidth / 2;
-    const featurePoint = map.project(lngLat);
-    panX = targetX - featurePoint.x;
-  }
-
-  if (Math.abs(panX) < 8 && Math.abs(panY) < 8) {
+  if (bottomOverlayHeight <= 0) {
     return false;
   }
 
-  map.panBy([-panX, -panY], { duration: animate ? 300 : 0 });
+  const visibleHeight = mapHeight - bottomOverlayHeight - bottomNavHeight;
+  if (visibleHeight <= 0) {
+    return false;
+  }
+
+  const targetY = visibleHeight / 2;
+  const featurePoint = map.project(lngLat);
+  const panY = targetY - featurePoint.y;
+
+  if (Math.abs(panY) < 8) {
+    return false;
+  }
+
+  map.panBy([0, -panY], { duration: animate ? 300 : 0 });
   return true;
 }
 
