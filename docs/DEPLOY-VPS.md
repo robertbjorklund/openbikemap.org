@@ -191,7 +191,13 @@ Tiles and API only listen on `127.0.0.1` — public access is via Caddy on 443.
 
 ---
 
-## 9. Analytics (optional)
+## 9. Security
+
+Threat model, OWASP mapping, and hardening checklists: [SECURITY.md](SECURITY.md) and [SECURITY-CHECKLIST.md](SECURITY-CHECKLIST.md).
+
+---
+
+## 10. Analytics (optional)
 
 For **Cloudflare Web Analytics** (traffic) and **Matomo** (product events: search, GPX, filters), see [ANALYTICS.md](ANALYTICS.md).
 
