@@ -5,6 +5,7 @@ import {
   parseEuroVeloRouteNumber,
 } from "./EuroVelo";
 import { AppConfig } from "../AppConfig";
+import { MTB_ROUTE_DEFAULT_COLOR } from "./MtbRouteColors";
 
 /** OSM bicycle route network tags on relation routes (routes MVT layer). */
 export enum RouteNetwork {
@@ -138,9 +139,14 @@ export function formatRouteDisplayTitle(
   return AppConfig.untitledFeatureTitle;
 }
 
-/** MapLibre expression for route line color from OSM network tag */
+/**
+ * MapLibre route line color — keep in sync with tiles.openbikemap.org build-style.mjs.
+ * MTB routes (route=mtb) use tile `color`; bicycle routes use network / EuroVelo rules.
+ */
 export const ROUTE_NETWORK_LINE_COLOR_EXPRESSION = [
   "case",
+  ["==", ["get", "osmRouteType"], "mtb"],
+  ["coalesce", ["get", "color"], MTB_ROUTE_DEFAULT_COLOR],
   EUROVELO_ROUTE_MATCH_EXPRESSION,
   EUROVELO_ROUTE_COLOR,
   ["has", "network"],
