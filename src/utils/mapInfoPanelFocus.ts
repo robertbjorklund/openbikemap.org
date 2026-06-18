@@ -9,7 +9,7 @@ import {
 } from "../components/sidePanelRailLayout";
 import type { MapFeature } from "../types/FeatureTypes";
 
-/** Bbox center of a line feature — used to center the route in the visible map area. */
+/** Bbox center of a line feature — e.g. search or URL deep links without a click point. */
 export function featureFocusLngLat(feature: MapFeature): [number, number] | null {
   const { geometry } = feature;
   const coords: [number, number][] = [];
@@ -45,9 +45,14 @@ export function featureFocusLngLat(feature: MapFeature): [number, number] | null
   return [(minLng + maxLng) / 2, (minLat + maxLat) / 2];
 }
 
+const VISIBLE_AREA_MARGIN_PX = 16;
+const MIN_PAN_PX = 8;
+/** Cap dramatic pans when the focus point is far from the click (legacy data). */
+const MAX_PAN_FRACTION_OF_MAP_HEIGHT = 0.4;
+
 /**
- * On mobile, pan so the selected feature sits in the center of the map area not
- * covered by a bottom sheet.
+ * On mobile, nudge the map just enough to keep `lngLat` (usually the map click)
+ * above a bottom sheet — without re-centering on the whole route bbox.
  */
 export function panMapToCenterFeatureInVisibleArea(
   map: maplibregl.Map,
@@ -72,19 +77,35 @@ export function panMapToCenterFeatureInVisibleArea(
   }
 
   const visibleHeight = mapHeight - bottomOverlayHeight - bottomNavHeight;
-  if (visibleHeight <= 0) {
+  if (visibleHeight <= VISIBLE_AREA_MARGIN_PX * 2) {
     return false;
   }
 
-  const targetY = visibleHeight / 2;
-  const featurePoint = map.project(lngLat);
-  const panY = targetY - featurePoint.y;
+  const maxY = visibleHeight - VISIBLE_AREA_MARGIN_PX;
+  const minY = VISIBLE_AREA_MARGIN_PX;
+  const point = map.project(lngLat);
 
-  if (Math.abs(panY) < 8) {
+  if (point.y <= maxY && point.y >= minY) {
     return false;
   }
 
-  map.panBy([0, -panY], { duration: animate ? 300 : 0 });
+  let panY = 0;
+  if (point.y > maxY) {
+    panY = point.y - maxY;
+  } else if (point.y < minY) {
+    panY = point.y - minY;
+  }
+
+  if (Math.abs(panY) < MIN_PAN_PX) {
+    return false;
+  }
+
+  const maxPan = mapHeight * MAX_PAN_FRACTION_OF_MAP_HEIGHT;
+  if (Math.abs(panY) > maxPan) {
+    panY = Math.sign(panY) * maxPan;
+  }
+
+  map.panBy([0, panY], { duration: animate ? 300 : 0 });
   return true;
 }
 

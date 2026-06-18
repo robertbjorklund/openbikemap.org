@@ -7,7 +7,6 @@ import { FeatureType, type MapFeature } from "../types/FeatureTypes";
 import { featuresForHighlight } from "../utils/FeatureGroup";
 import { findRouteStageFeature } from "../utils/routeGroupSelection";
 import {
-  featureFocusLngLat,
   panMapToCenterFeatureInVisibleArea,
 } from "../utils/mapInfoPanelFocus";
 import { formatRouteStageTooltip } from "../utils/RouteStage";
@@ -432,14 +431,9 @@ export class Map {
 
     this.infoPanFeatureId = selectedObject.id;
 
-    const lngLat =
-      (selectedObject.feature &&
-        featureFocusLngLat(selectedObject.feature)) ||
-      selectedObject.pan.lngLat;
-
     panMapToCenterFeatureInVisibleArea(
       this.map,
-      lngLat,
+      selectedObject.pan.lngLat,
       selectedObject.pan.animate,
     );
   }
