@@ -5,6 +5,7 @@ import type * as maplibregl from "maplibre-gl";
 import * as React from "react";
 
 import { ROUTE_NETWORK_LABELS, RouteNetwork, formatRouteDisplayTitle } from "../types/RouteNetwork";
+import { formatOsmColourLabel } from "../types/MtbRouteColors";
 
 import type { RouteFeature } from "../types/FeatureTypes";
 
@@ -25,6 +26,7 @@ import {
   TITLE_ICON_SIZE,
 } from "./InfoFeatureHeader";
 import { RouteNetworkLegendIcon } from "./RouteNetworkLegendIcon";
+import { MtbRouteLegendIcon } from "./MtbRouteLegendIcon";
 import { MapFeatureKindRailIcon } from "./MapFeatureKindRailIcon";
 
 import { InfoPanelActions } from "./InfoPanelActions";
@@ -79,6 +81,7 @@ function RouteInfoBody({
 
   const stageLabel = formatRouteStageLabel(properties);
   const isStageView = !!routeGroup?.activeStageId;
+  const isMtbRoute = properties.osmRouteType === "mtb";
   const networkLabel =
 
     properties.network &&
@@ -86,13 +89,17 @@ function RouteInfoBody({
     (ROUTE_NETWORK_LABELS[properties.network as RouteNetwork] ??
 
       properties.network);
-
+  const colourLabel = formatOsmColourLabel(properties.osmColour);
   const featureKind = getMapFeatureKind(feature);
   const subtitle = isStageView && stageLabel
     ? stageLabel
-    : networkLabel
-      ? `${featureKind.label} · ${networkLabel}`
-      : featureKind.label;
+    : isMtbRoute
+      ? colourLabel
+        ? `${featureKind.label} · ${colourLabel}`
+        : featureKind.label
+      : networkLabel
+        ? `${featureKind.label} · ${networkLabel}`
+        : featureKind.label;
   const subtitleIcon = (
     <MapFeatureKindRailIcon kind={featureKind.kind} size={22} />
   );
@@ -105,7 +112,12 @@ function RouteInfoBody({
 
 
 
-  const networkIcon = (
+  const routeIcon = isMtbRoute ? (
+    <MtbRouteLegendIcon
+      osmColour={properties.osmColour}
+      size={TITLE_ICON_SIZE}
+    />
+  ) : (
     <RouteNetworkLegendIcon
       network={properties.network}
       label={properties.ref}
@@ -124,7 +136,7 @@ function RouteInfoBody({
             title={title}
             subtitle={subtitle}
             subtitleIcon={subtitleIcon}
-            icon={networkIcon}
+            icon={routeIcon}
           />
         ) : (
           <InfoFeatureHeader

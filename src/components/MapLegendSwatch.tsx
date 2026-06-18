@@ -97,8 +97,8 @@ export const ImbaLineSwatch: React.FunctionComponent<{ muted?: boolean }> = (
   </SwatchFrame>
 );
 
-/** Signed bicycle routes — solid coloured line. */
-export const RouteLineSwatch: React.FunctionComponent<{ muted?: boolean }> = (
+/** Signed bicycle network routes — solid coloured line. */
+export const BicycleRouteLineSwatch: React.FunctionComponent<{ muted?: boolean }> = (
   props,
 ) => (
   <SwatchFrame muted={props.muted}>
@@ -115,3 +115,25 @@ export const RouteLineSwatch: React.FunctionComponent<{ muted?: boolean }> = (
     </svg>
   </SwatchFrame>
 );
+
+/** Named MTB route relations (route=mtb) — line coloured from OSM tag. */
+export const MtbRouteLineSwatch: React.FunctionComponent<{ muted?: boolean }> = (
+  props,
+) => (
+  <SwatchFrame muted={props.muted}>
+    <svg width={SWATCH_WIDTH} height={SWATCH_HEIGHT} viewBox="0 0 48 10">
+      <line
+        x1="4"
+        y1="5"
+        x2="44"
+        y2="5"
+        stroke={MTB_TRAIL_COLOR_RED}
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
+  </SwatchFrame>
+);
+
+/** @deprecated Use BicycleRouteLineSwatch */
+export const RouteLineSwatch = BicycleRouteLineSwatch;

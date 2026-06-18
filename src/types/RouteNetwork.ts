@@ -31,18 +31,22 @@ export const ROUTE_NETWORK_COLORS: Record<RouteNetwork, string> = {
 
 export const ROUTE_NETWORK_DEFAULT_COLOR = "#7b1fa2";
 
-/** Routes in tiles without a network tag */
-export const ROUTE_NETWORK_NOT_SET = "not_set" as const;
-
-export type RouteNetworkFilter = RouteNetwork | typeof ROUTE_NETWORK_NOT_SET;
-
-export const ROUTE_NETWORK_FILTERS: readonly RouteNetworkFilter[] = [
+/** Signed bicycle routes (route=bicycle) — excludes route=mtb and legacy untagged routes. */
+export const BICYCLE_ROUTE_NETWORK_FILTERS: readonly RouteNetwork[] = [
   RouteNetwork.Icn,
   RouteNetwork.Ncn,
   RouteNetwork.Rcn,
   RouteNetwork.Lcn,
-  ROUTE_NETWORK_NOT_SET,
 ];
+
+/** @deprecated Legacy filter value — use osmRouteType=mtb instead of “no network”. */
+export const ROUTE_NETWORK_NOT_SET = "not_set" as const;
+
+export type RouteNetworkFilter = RouteNetwork;
+
+/** @deprecated Use BICYCLE_ROUTE_NETWORK_FILTERS */
+export const ROUTE_NETWORK_FILTERS: readonly RouteNetworkFilter[] =
+  BICYCLE_ROUTE_NETWORK_FILTERS;
 
 export function routeNetworkColor(
   network: string | null | undefined,

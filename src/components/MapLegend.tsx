@@ -4,17 +4,24 @@ import * as React from "react";
 import { AppConfig } from "../AppConfig";
 import MapFilters from "../MapFilters";
 import {
+  BicycleRouteLineSwatch,
   ImbaLineSwatch,
-  RouteLineSwatch,
+  MtbRouteLineSwatch,
   StsLineSwatch,
 } from "./MapLegendSwatch";
 
 const LEGEND_ROWS = [
   {
-    key: "routes",
-    label: AppConfig.layerFilters.routes.railLabel,
-    isActive: (filters: MapFilters) => filters.showRoutes,
-    Swatch: RouteLineSwatch,
+    key: "bicycleRoutes",
+    label: AppConfig.layerFilters.bicycleRoutes.panelTitle,
+    isActive: (filters: MapFilters) => filters.showBicycleRoutes,
+    Swatch: BicycleRouteLineSwatch,
+  },
+  {
+    key: "mtbRoutes",
+    label: AppConfig.layerFilters.mtbRoutes.panelTitle,
+    isActive: (filters: MapFilters) => filters.showMtbRoutes,
+    Swatch: MtbRouteLineSwatch,
   },
   {
     key: "mtbTrail",

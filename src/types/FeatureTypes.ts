@@ -25,6 +25,9 @@ export enum SourceType {
   OpenStreetMap = "openstreetmap",
 }
 
+/** OSM `route` tag on relation features in the routes MVT layer. */
+export type OsmRouteType = "bicycle" | "mtb";
+
 export interface Source {
   type: SourceType;
   id: string;
@@ -74,6 +77,10 @@ export interface RouteProperties {
   to: string | null;
   via: string | null;
   network: string | null;
+  /** OSM route tag — bicycle network route vs named MTB route relation. */
+  osmRouteType: OsmRouteType;
+  /** OSM colour tag (e.g. red, blue) for route=mtb. */
+  osmColour: string | null;
   distance: string | null;
   roundtrip: boolean | null;
   pavedRatio: number | null;

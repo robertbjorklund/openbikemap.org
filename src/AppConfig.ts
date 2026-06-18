@@ -77,8 +77,20 @@ export const AppConfig = {
     routes: {
       panelTitle: "Routes",
       railLabel: "Routes",
-      featureLabel: "Route",
+      featureLabel: "Cycling route",
       showSwitchAriaLabel: "Show signed routes on map",
+    },
+    bicycleRoutes: {
+      panelTitle: "Cycling networks",
+      subtitle:
+        "Signed long-distance cycling routes (LCN, RCN, NCN, EuroVelo/ICN).",
+      showSwitchAriaLabel: "Show cycling network routes on map",
+    },
+    mtbRoutes: {
+      panelTitle: "MTB routes",
+      subtitle:
+        "Named MTB loops and bike-park routes from OpenStreetMap (route=mtb), coloured by OSM tag when available.",
+      showSwitchAriaLabel: "Show MTB routes on map",
     },
   },
 

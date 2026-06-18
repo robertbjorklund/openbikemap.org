@@ -6,6 +6,7 @@ import {
   Status,
   type MapFeature,
   type RouteProperties,
+  type OsmRouteType,
   type TrailCategory,
   type TrailProperties,
 } from "../types/FeatureTypes";
@@ -23,6 +24,10 @@ function asNumber(value: unknown): number | null {
   }
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+function parseOsmRouteType(value: unknown): OsmRouteType {
+  return value === "mtb" ? "mtb" : "bicycle";
 }
 
 function asBoolean(value: unknown): boolean | null {
@@ -60,6 +65,8 @@ export function mapFeatureFromMvt(
       to: asString(feature.properties.to),
       via: asString(feature.properties.via),
       network: asString(feature.properties.network),
+      osmRouteType: parseOsmRouteType(feature.properties.osmRouteType),
+      osmColour: asString(feature.properties.osmColour),
       distance: null,
       roundtrip: null,
       pavedRatio: asNumber(feature.properties.pavedRatio),

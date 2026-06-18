@@ -22,6 +22,7 @@ import { MtbImbaLegendIcon } from "./MtbImbaLegendIcon";
 import { MtbScaleLegendIcon } from "./MtbScaleLegendIcon";
 import { PanelShell } from "./PanelShell";
 import { OverflowScrollText } from "./OverflowScrollText";
+import { MtbRouteLegendIcon } from "./MtbRouteLegendIcon";
 import { RouteNetworkLegendIcon } from "./RouteNetworkLegendIcon";
 import { useMobilePanelLayout } from "./useMobilePanelLayout";
 
@@ -66,6 +67,14 @@ function featurePanelTitleIcon(feature: MapFeature): React.ReactNode | undefined
   }
 
   const route = feature as RouteFeature;
+  if (route.properties.osmRouteType === "mtb") {
+    return (
+      <MtbRouteLegendIcon
+        osmColour={route.properties.osmColour}
+        size={PANEL_TITLE_ICON_SIZE}
+      />
+    );
+  }
   return (
     <RouteNetworkLegendIcon
       network={route.properties.network}
@@ -102,7 +111,13 @@ export const InfoPanel: React.FunctionComponent<{
         kind={featureKind.kind}
         size={MOBILE_ROUTE_HEADER_ICON_SIZE}
       />
-      {props.feature.properties.type === FeatureType.Route ? (
+      {props.feature.properties.type === FeatureType.Route &&
+      (props.feature as RouteFeature).properties.osmRouteType === "mtb" ? (
+        <MtbRouteLegendIcon
+          osmColour={(props.feature as RouteFeature).properties.osmColour}
+          size={MOBILE_ROUTE_SHIELD_SIZE}
+        />
+      ) : props.feature.properties.type === FeatureType.Route ? (
         <RouteNetworkLegendIcon
           network={(props.feature as RouteFeature).properties.network}
           label={(props.feature as RouteFeature).properties.ref}

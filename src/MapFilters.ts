@@ -11,8 +11,10 @@ export default interface MapFilters {
   showMtbSts: boolean;
   /** Show IMBA trails on the map (checkbox selections preserved when off). */
   showMtbImba: boolean;
-  /** Show bicycle routes on the map (checkbox selections preserved when off). */
-  showRoutes: boolean;
+  /** Show signed bicycle network routes (route=bicycle). */
+  showBicycleRoutes: boolean;
+  /** Show named MTB route relations (route=mtb). */
+  showMtbRoutes: boolean;
 }
 
 export const defaultMapFilters: MapFilters = {
@@ -22,5 +24,6 @@ export const defaultMapFilters: MapFilters = {
   hiddenRouteNetworks: [],
   showMtbSts: true,
   showMtbImba: true,
-  showRoutes: true,
+  showBicycleRoutes: true,
+  showMtbRoutes: true,
 };

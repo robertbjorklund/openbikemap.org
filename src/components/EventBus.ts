@@ -91,6 +91,10 @@ export default interface EventBus {
 
   toggleRoutesGroup(): void;
 
+  toggleBicycleRoutesGroup(): void;
+
+  toggleMtbRoutesGroup(): void;
+
   toggleRouteNetwork(network: RouteNetworkFilter): void;
 
   showAllRouteNetworks(): void;

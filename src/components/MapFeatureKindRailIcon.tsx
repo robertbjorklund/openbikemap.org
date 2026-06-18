@@ -4,6 +4,7 @@ import type { MapFeatureKind } from "../utils/MapFeatureKind";
 import { BicycleRouteRailIcon } from "./icons/BicycleRouteRailIcon";
 import { ImbaRailIcon } from "./icons/ImbaRailIcon";
 import { StsRailIcon } from "./icons/StsRailIcon";
+import { MtbRouteLegendIcon } from "./MtbRouteLegendIcon";
 
 const RAIL_ICON_BASE_SIZE = 26;
 
@@ -15,6 +16,8 @@ export const MapFeatureKindRailIcon: React.FunctionComponent<{
   const icon =
     kind === "bicycle-route" ? (
       <BicycleRouteRailIcon />
+    ) : kind === "mtb-route" ? (
+      <MtbRouteLegendIcon size={RAIL_ICON_BASE_SIZE} />
     ) : kind === "imba" ? (
       <ImbaRailIcon />
     ) : (

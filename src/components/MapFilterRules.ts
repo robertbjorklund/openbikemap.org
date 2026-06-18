@@ -31,9 +31,7 @@ import {
 
 import {
 
-  ROUTE_NETWORK_FILTERS,
-
-  ROUTE_NETWORK_NOT_SET,
+  BICYCLE_ROUTE_NETWORK_FILTERS,
 
   type RouteNetworkFilter,
 
@@ -375,13 +373,13 @@ function buildTrailLayerFilter(
 
 
 
-function getRouteNetworkFilter(
+function getBicycleRouteNetworkFilter(
 
   hiddenRouteNetworks: RouteNetworkFilter[],
 
 ): maplibregl.ExpressionFilterSpecification | null {
 
-  const visibleNetworks = ROUTE_NETWORK_FILTERS.filter(
+  const visibleNetworks = BICYCLE_ROUTE_NETWORK_FILTERS.filter(
 
     (network) => !hiddenRouteNetworks.includes(network),
 
@@ -389,7 +387,7 @@ function getRouteNetworkFilter(
 
 
 
-  if (visibleNetworks.length === ROUTE_NETWORK_FILTERS.length) {
+  if (visibleNetworks.length === BICYCLE_ROUTE_NETWORK_FILTERS.length) {
 
     return null;
 
@@ -403,34 +401,58 @@ function getRouteNetworkFilter(
 
 
 
-  const conditions: maplibregl.ExpressionFilterSpecification[] =
-
-    visibleNetworks.map((network) => {
-
-      if (network === ROUTE_NETWORK_NOT_SET) {
-
-        return ["!", ["has", "network"]];
-
-      }
-
-      return ["==", ["get", "network"], network];
-
-    });
-
-
-
-  return ["any", ...conditions];
+  return [
+    "any",
+    ...visibleNetworks.map(
+      (network): maplibregl.ExpressionFilterSpecification => [
+        "==",
+        ["get", "network"],
+        network,
+      ],
+    ),
+  ];
 
 }
 
 
 
 function getRoutesFilter(filters: MapFilters): ObjectFilterRules {
-  if (!filters.showRoutes) {
+  const branches: maplibregl.ExpressionFilterSpecification[] = [];
+
+  if (filters.showMtbRoutes) {
+    branches.push(["==", ["get", "osmRouteType"], "mtb"]);
+  }
+
+  if (filters.showBicycleRoutes) {
+    const networkFilter = getBicycleRouteNetworkFilter(
+      filters.hiddenRouteNetworks,
+    );
+    const noBicycleNetworksVisible =
+      networkFilter !== null &&
+      Array.isArray(networkFilter) &&
+      networkFilter[0] === "==" &&
+      networkFilter[2] === "";
+
+    if (networkFilter === null) {
+      branches.push(["==", ["get", "osmRouteType"], "bicycle"]);
+    } else if (!noBicycleNetworksVisible) {
+      branches.push([
+        "all",
+        ["==", ["get", "osmRouteType"], "bicycle"],
+        networkFilter,
+      ]);
+    }
+  }
+
+  if (branches.length === 0) {
     return "hidden";
   }
 
-  return getRouteNetworkFilter(filters.hiddenRouteNetworks);
+  if (branches.length === 1) {
+    return branches[0];
+  }
+
+  return ["any", ...branches];
 }
 
 
@@ -454,12 +476,15 @@ export function isMtbActivityVisible(filters: MapFilters): boolean {
   return stsVisible || imbaVisible;
 }
 
-/** True when any bicycle route may be drawn (group on and some network visible). */
+/** True when any bicycle or MTB route may be drawn. */
 export function isRoutesActivityVisible(filters: MapFilters): boolean {
-  if (!filters.showRoutes) {
+  if (filters.showMtbRoutes) {
+    return true;
+  }
+  if (!filters.showBicycleRoutes) {
     return false;
   }
-  return !ROUTE_NETWORK_FILTERS.every((network) =>
+  return !BICYCLE_ROUTE_NETWORK_FILTERS.every((network) =>
     filters.hiddenRouteNetworks.includes(network),
   );
 }
@@ -565,17 +590,17 @@ function matchesRouteNetworkFilter(
   network: string | null,
   hiddenRouteNetworks: RouteNetworkFilter[],
 ): boolean {
-  const visibleNetworks = ROUTE_NETWORK_FILTERS.filter(
+  if (!network) {
+    return false;
+  }
+  const visibleNetworks = BICYCLE_ROUTE_NETWORK_FILTERS.filter(
     (value) => !hiddenRouteNetworks.includes(value),
   );
-  if (visibleNetworks.length === ROUTE_NETWORK_FILTERS.length) {
+  if (visibleNetworks.length === BICYCLE_ROUTE_NETWORK_FILTERS.length) {
     return true;
   }
   if (visibleNetworks.length === 0) {
     return false;
-  }
-  if (!network) {
-    return visibleNetworks.includes(ROUTE_NETWORK_NOT_SET);
   }
   return visibleNetworks.includes(network as RouteNetworkFilter);
 }
@@ -584,7 +609,10 @@ function isRouteVisibleUnderFilters(
   properties: RouteProperties,
   filters: MapFilters,
 ): boolean {
-  if (!filters.showRoutes) {
+  if (properties.osmRouteType === "mtb") {
+    return filters.showMtbRoutes;
+  }
+  if (!filters.showBicycleRoutes) {
     return false;
   }
   return matchesRouteNetworkFilter(

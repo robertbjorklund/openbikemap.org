@@ -171,7 +171,8 @@ export default class StateReducer implements EventBus {
       mapFilters.hiddenRouteNetworks = enabling
         ? []
         : [...ROUTE_NETWORK_FILTERS];
-      mapFilters.showRoutes = enabling;
+      mapFilters.showBicycleRoutes = enabling;
+      mapFilters.showMtbRoutes = enabling;
     }
 
     this.update({ mapFilters });
@@ -264,11 +265,34 @@ export default class StateReducer implements EventBus {
     });
   };
 
-  toggleRoutesGroup = () => {
+  toggleBicycleRoutesGroup = () => {
     this.update({
       mapFilters: {
         ...this._state.mapFilters,
-        showRoutes: !this._state.mapFilters.showRoutes,
+        showBicycleRoutes: !this._state.mapFilters.showBicycleRoutes,
+      },
+    });
+  };
+
+  toggleMtbRoutesGroup = () => {
+    this.update({
+      mapFilters: {
+        ...this._state.mapFilters,
+        showMtbRoutes: !this._state.mapFilters.showMtbRoutes,
+      },
+    });
+  };
+
+  toggleRoutesGroup = () => {
+    const next = !(
+      this._state.mapFilters.showBicycleRoutes &&
+      this._state.mapFilters.showMtbRoutes
+    );
+    this.update({
+      mapFilters: {
+        ...this._state.mapFilters,
+        showBicycleRoutes: next,
+        showMtbRoutes: next,
       },
     });
   };
