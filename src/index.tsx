@@ -2,7 +2,7 @@ import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import * as ReactDOM from "react-dom/client";
 import { AppConfig } from "./AppConfig";
-import { BetaBanner } from "./components/BetaBanner";
+import { BetaBanner, BETA_BANNER_HEIGHT_PX } from "./components/BetaBanner";
 import { Map } from "./components/Map";
 import { Themed } from "./components/Themed";
 import State, { getInitialState, StateChanges } from "./components/State";
@@ -21,6 +21,11 @@ function initialize() {
   trackAppPageView();
 
   if (AppConfig.showBetaBanner) {
+    document.documentElement.style.setProperty(
+      "--beta-banner-height",
+      `${BETA_BANNER_HEIGHT_PX}px`,
+    );
+
     const bannerRoot = document.getElementById("beta-banner-root");
     if (bannerRoot) {
       ReactDOM.createRoot(bannerRoot).render(
