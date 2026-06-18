@@ -1,24 +1,34 @@
 import * as maplibregl from "maplibre-gl";
 import { debounce } from "throttle-debounce";
+import type MapFilters from "../MapFilters";
 import { FeatureType, type MapFeature } from "../types/FeatureTypes";
 import { findRelatedFeatures } from "../utils/FeatureGroup";
+import { pickDistinctRoutesAtPoint } from "../utils/pickRoutesAtMapPoint";
 import EventBus from "./EventBus";
 import { mapFeatureFromMvt } from "./MvtFeature";
 import type { RouteGroupSelection } from "./SelectedObject";
 
 const TAPPABLE_LAYER_IDS = ["tappable-trail", "tappable-route"];
 
+export interface RouteClickContext {
+  candidates: MapFeature[];
+  focusLngLat: [number, number];
+  focusClickX: number;
+}
+
 export interface RouteInteractionCallbacks {
   getRouteGroup: () => RouteGroupSelection | null;
   /** When set, only routes in this group accept clicks. */
   getLockedRouteGroupId: () => string | null;
+  getMapFilters: () => MapFilters;
   onStageHover: (stageId: string | null, point?: maplibregl.Point) => void;
+  onRouteDisambiguation: (context: RouteClickContext) => void;
 }
 
 export class MapInteractionManager {
   private map: maplibregl.Map;
   private eventBus: EventBus;
-  private callbacks: RouteInteractionCallbacks | undefined;
+  private callbacks: RouteInteractionCallbacks;
   private interactionsEnabled = true;
   private attachedLayerHandlers = new Set<string>();
   private hoverLayerCount = 0;
@@ -27,7 +37,7 @@ export class MapInteractionManager {
   constructor(
     map: maplibregl.Map,
     eventBus: EventBus,
-    callbacks?: RouteInteractionCallbacks,
+    callbacks: RouteInteractionCallbacks,
   ) {
     this.map = map;
     this.eventBus = eventBus;
@@ -125,26 +135,41 @@ export class MapInteractionManager {
     return null;
   }
 
+  private openMapFeature(
+    mapFeature: MapFeature,
+    focusLngLat: [number, number],
+    focusClickX: number,
+  ): void {
+    const id = mapFeature.properties.id;
+    const relatedFeatures = findRelatedFeatures(this.map, mapFeature);
+    this.eventBus.showInfo(id, {
+      clickedFeature: mapFeature,
+      relatedFeatures,
+      focusLngLat,
+      focusClickX,
+    });
+  }
+
   private onMapMouseMove = (e: maplibregl.MapMouseEvent) => {
     if (!this.interactionsEnabled) {
       return;
     }
 
-    const routeGroup = this.callbacks?.getRouteGroup();
+    const routeGroup = this.callbacks.getRouteGroup();
     if (!routeGroup) {
-      this.callbacks?.onStageHover(null, e.point);
+      this.callbacks.onStageHover(null, e.point);
       return;
     }
 
     const stageId = this.pickRouteStageAtPoint(e.point, routeGroup.groupId);
-    this.callbacks?.onStageHover(stageId, e.point);
+    this.callbacks.onStageHover(stageId, e.point);
   };
 
   private onMapMouseLeave = () => {
     if (!this.interactionsEnabled) {
       return;
     }
-    this.callbacks?.onStageHover(null);
+    this.callbacks.onStageHover(null);
   };
 
   private onLayerClick = debounce(
@@ -161,7 +186,9 @@ export class MapInteractionManager {
         return;
       }
 
-      const lockedGroupId = this.callbacks?.getLockedRouteGroupId();
+      const focusLngLat: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+      const focusClickX = e.point.x;
+      const lockedGroupId = this.callbacks.getLockedRouteGroupId();
       const isRouteLayer = sourceLayer === "routes";
 
       if (lockedGroupId && isRouteLayer) {
@@ -172,7 +199,7 @@ export class MapInteractionManager {
         if (!picked) {
           return;
         }
-        const routeGroup = this.callbacks?.getRouteGroup();
+        const routeGroup = this.callbacks.getRouteGroup();
         if (
           routeGroup &&
           picked.properties.type === FeatureType.Route &&
@@ -180,6 +207,28 @@ export class MapInteractionManager {
         ) {
           this.eventBus.selectRouteStage(picked.properties.stageId);
         }
+        return;
+      }
+
+      if (isRouteLayer) {
+        const candidates = pickDistinctRoutesAtPoint(
+          this.map,
+          e.point,
+          this.getRouteTappableLayerIds(),
+          this.callbacks.getMapFilters(),
+        );
+        if (candidates.length === 0) {
+          return;
+        }
+        if (candidates.length === 1) {
+          this.openMapFeature(candidates[0], focusLngLat, focusClickX);
+          return;
+        }
+        this.callbacks.onRouteDisambiguation({
+          candidates,
+          focusLngLat,
+          focusClickX,
+        });
         return;
       }
 
@@ -194,13 +243,7 @@ export class MapInteractionManager {
         return;
       }
 
-      const relatedFeatures = findRelatedFeatures(this.map, mapFeature);
-      this.eventBus.showInfo(id, {
-        clickedFeature: mapFeature,
-        relatedFeatures,
-        focusLngLat: [e.lngLat.lng, e.lngLat.lat],
-        focusClickX: e.point.x,
-      });
+      this.openMapFeature(mapFeature, focusLngLat, focusClickX);
     },
     { atBegin: true },
   );

@@ -1,10 +1,11 @@
 import * as maplibregl from "maplibre-gl";
+import * as ReactDOM from "react-dom/client";
 import { throttle } from "throttle-debounce";
 import MapFilters, { defaultMapFilters } from "../MapFilters";
 import { MapMarker } from "../MapMarker";
 import { MAP_STYLE_URLS, MapStyle } from "../MapStyle";
 import { FeatureType, type MapFeature } from "../types/FeatureTypes";
-import { featuresForHighlight } from "../utils/FeatureGroup";
+import { featuresForHighlight, findRelatedFeatures } from "../utils/FeatureGroup";
 import { findRouteStageFeature } from "../utils/routeGroupSelection";
 import {
   panMapToCenterFeatureInVisibleArea,
@@ -28,7 +29,12 @@ import {
   applyPaintRulesToMap,
   applyPaintRulesToStyleLayers,
 } from "./MapPaintRules";
-import { MapInteractionManager } from "./MapInteractionManager";
+import {
+  MapInteractionManager,
+  type RouteClickContext,
+} from "./MapInteractionManager";
+import { RouteDisambiguationDialog } from "./RouteDisambiguationDialog";
+import { Themed } from "./Themed";
 import { EsriAttribution } from "./EsriAttribution";
 import { FilterControl } from "./FilterControl";
 import { LegendControl } from "./LegendControl";
@@ -203,6 +209,9 @@ export class Map {
   private hoveredStageId: string | null = null;
   private stageTooltipEl: HTMLDivElement;
   private infoPanFeatureId: string | null = null;
+  private eventBus: EventBus;
+  private routeDisambiguationHost: HTMLDivElement;
+  private routeDisambiguationRoot: ReactDOM.Root | null = null;
 
   constructor(
     cameraPosition: CameraPosition,
@@ -211,6 +220,7 @@ export class Map {
     cameraPositionManager: CameraPositionManager,
   ) {
     this.cameraPositionManager = cameraPositionManager;
+    this.eventBus = eventBus;
     const isEmbedded = window.self !== window.top;
 
     registerSatelliteTileProtocol();
@@ -231,10 +241,15 @@ export class Map {
     this.stageTooltipEl.hidden = true;
     this.map.getContainer().appendChild(this.stageTooltipEl);
 
+    this.routeDisambiguationHost = document.createElement("div");
+    this.map.getContainer().appendChild(this.routeDisambiguationHost);
+
     new MapInteractionManager(this.map, eventBus, {
       getRouteGroup: () => this.routeGroupSelection,
       getLockedRouteGroupId: () => this.getLockedRouteGroupId(),
+      getMapFilters: () => this.currentFilters,
       onStageHover: (stageId, point) => this.setHoveredRouteStage(stageId, point),
+      onRouteDisambiguation: (context) => this.showRouteDisambiguation(context),
     });
 
     this.sidePanelControl = new SidePanelControl(
@@ -406,6 +421,7 @@ export class Map {
   }
 
   setSelectedObject(selectedObject: SelectedObject | null | undefined): void {
+    this.closeRouteDisambiguation();
     this.routeGroupSelection = selectedObject?.routeGroup ?? null;
     this.hoveredStageId = null;
     this.hideStageTooltip();
@@ -413,6 +429,43 @@ export class Map {
     this.selectedFeature = feature;
     this.updateSelectedHighlight();
     this.focusMapForInfoPanel(selectedObject);
+  }
+
+  private showRouteDisambiguation(context: RouteClickContext): void {
+    this.renderRouteDisambiguation(context);
+  }
+
+  private closeRouteDisambiguation(): void {
+    this.renderRouteDisambiguation(null);
+  }
+
+  private renderRouteDisambiguation(context: RouteClickContext | null): void {
+    if (!this.routeDisambiguationRoot) {
+      this.routeDisambiguationRoot = ReactDOM.createRoot(
+        this.routeDisambiguationHost,
+      );
+    }
+
+    this.routeDisambiguationRoot.render(
+      context ? (
+        <Themed>
+          <RouteDisambiguationDialog
+            open
+            candidates={context.candidates}
+            onSelect={(feature) => {
+              this.closeRouteDisambiguation();
+              this.eventBus.showInfo(feature.properties.id, {
+                clickedFeature: feature,
+                relatedFeatures: findRelatedFeatures(this.map, feature),
+                focusLngLat: context.focusLngLat,
+                focusClickX: context.focusClickX,
+              });
+            }}
+            onClose={() => this.closeRouteDisambiguation()}
+          />
+        </Themed>
+      ) : null,
+    );
   }
 
   private focusMapForInfoPanel(
