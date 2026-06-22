@@ -36,6 +36,7 @@ import {
 } from "./MapInteractionManager";
 import { RouteDisambiguationDialog } from "./RouteDisambiguationDialog";
 import { TrailDisambiguationDialog } from "./TrailDisambiguationDialog";
+import { CameraPositionConsentSnackbar } from "./CameraPositionConsentSnackbar";
 import { Themed } from "./Themed";
 import { EsriAttribution } from "./EsriAttribution";
 import { FilterControl } from "./FilterControl";
@@ -50,6 +51,12 @@ import {
 import { SelectedObject, type RouteGroupSelection } from "./SelectedObject";
 import { SidePanelControl } from "./SidePanelControl";
 import State from "./State";
+import { OPENBIKEMAP_LINE_MIN_ZOOM } from "../constants/OpenBikeMapLayerZoom";
+import { ROUTE_NETWORK_LINE_COLOR_EXPRESSION } from "../types/RouteNetwork";
+import {
+  isCameraPositionConsentPending,
+  setCameraPositionConsent,
+} from "../utils/cameraPositionConsent";
 import { addUnitSystemChangeListener_NonReactive, getUnitSystem } from "./UnitSystemManager";
 
 const SELECTED_SOURCE_ID = "openbikemap-selected";
@@ -58,13 +65,6 @@ const SELECTED_GROUP_SOURCE_ID = "openbikemap-selected-group";
 const SELECTED_GROUP_GLOW_LAYER_ID = "openbikemap-selected-group-line-glow";
 const SELECTED_STAGE_SOURCE_ID = "openbikemap-selected-stage";
 const SELECTED_STAGE_GLOW_LAYER_ID = "openbikemap-selected-stage-line-glow";
-
-/** Legacy top overlay layers — removed when present. */
-const LEGACY_ROUTE_HIGHLIGHT_LAYER_IDS = [
-  "openbikemap-selected-line",
-  "openbikemap-selected-group-line",
-  "openbikemap-selected-stage-line",
-] as const;
 
 const ROUTE_LAYER_STACK = [
   "routes-casing",
@@ -96,6 +96,68 @@ interface RouteHighlightGlow {
 
 function highlightOutlineLayerId(glowLayerId: string): string {
   return `${glowLayerId}-outline`;
+}
+
+function highlightCasingLayerId(glowLayerId: string): string {
+  return glowLayerId.replace("-line-glow", "-line-casing");
+}
+
+function highlightCoreLayerId(glowLayerId: string): string {
+  return glowLayerId.replace("-line-glow", "-line");
+}
+
+function highlightLabelStripeLayerId(glowLayerId: string): string {
+  return glowLayerId.replace("-line-glow", "-label-stripe");
+}
+
+function highlightLabelLayerId(glowLayerId: string): string {
+  return glowLayerId.replace("-line-glow", "-label");
+}
+
+const ROUTE_HIGHLIGHT_ROUTE_FILTER: maplibregl.ExpressionFilterSpecification = [
+  "==",
+  ["get", "type"],
+  FeatureType.Route,
+];
+
+const ROUTE_HIGHLIGHT_LABEL_TEXT: maplibregl.ExpressionSpecification = [
+  "coalesce",
+  ["get", "name"],
+  ["get", "ref"],
+];
+
+const ROUTE_HIGHLIGHT_CORE_LINE_WIDTH: maplibregl.ExpressionSpecification = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  OPENBIKEMAP_LINE_MIN_ZOOM,
+  1.2,
+  10,
+  2.2,
+  14,
+  4,
+  16,
+  4.5,
+];
+
+const ROUTE_HIGHLIGHT_CASING_LINE_WIDTH: maplibregl.ExpressionSpecification = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  OPENBIKEMAP_LINE_MIN_ZOOM,
+  2.5,
+  10,
+  4.5,
+  14,
+  8,
+  16,
+  9,
+];
+
+function highlightRouteLineColor(): maplibregl.ExpressionSpecification {
+  return JSON.parse(
+    JSON.stringify(ROUTE_NETWORK_LINE_COLOR_EXPRESSION),
+  ) as maplibregl.ExpressionSpecification;
 }
 
 const ROUTE_HIGHLIGHT_GLOW_WIDTH: maplibregl.ExpressionSpecification = [
@@ -216,6 +278,9 @@ export class Map {
   private routeDisambiguationRoot: ReactDOM.Root | null = null;
   private trailDisambiguationHost: HTMLDivElement;
   private trailDisambiguationRoot: ReactDOM.Root | null = null;
+  private cameraConsentHost: HTMLDivElement;
+  private cameraConsentRoot: ReactDOM.Root | null = null;
+  private cameraConsentOpen = false;
 
   constructor(
     cameraPosition: CameraPosition,
@@ -250,6 +315,9 @@ export class Map {
 
     this.trailDisambiguationHost = document.createElement("div");
     this.map.getContainer().appendChild(this.trailDisambiguationHost);
+
+    this.cameraConsentHost = document.createElement("div");
+    this.map.getContainer().appendChild(this.cameraConsentHost);
 
     new MapInteractionManager(this.map, eventBus, {
       getRouteGroup: () => this.routeGroupSelection,
@@ -323,6 +391,11 @@ export class Map {
     });
 
     this.map.on("moveend", saveCamera);
+
+    if (!isEmbedded) {
+      this.map.on("click", this.onMapClickForCameraConsent);
+    }
+
     this.map.on("error", (event) => {
       if (import.meta.env.DEV && event.error?.message) {
         console.warn("[map]", event.error.message);
@@ -438,6 +511,45 @@ export class Map {
     this.selectedFeature = feature;
     this.updateSelectedHighlight();
     this.focusMapForInfoPanel(selectedObject);
+  }
+
+  private onMapClickForCameraConsent = (): void => {
+    if (!isCameraPositionConsentPending() || this.cameraConsentOpen) {
+      return;
+    }
+    this.renderCameraPositionConsent(true);
+  };
+
+  private renderCameraPositionConsent(open: boolean): void {
+    this.cameraConsentOpen = open;
+
+    if (!this.cameraConsentRoot) {
+      this.cameraConsentRoot = ReactDOM.createRoot(this.cameraConsentHost);
+    }
+
+    this.cameraConsentRoot.render(
+      open ? (
+        <Themed>
+          <CameraPositionConsentSnackbar
+            open
+            onAccept={() => {
+              setCameraPositionConsent("granted");
+              this.cameraPositionManager.savePosition(
+                this.map.getCenter(),
+                this.map.getZoom(),
+                this.map.getBearing(),
+                this.map.getPitch(),
+              );
+              this.renderCameraPositionConsent(false);
+            }}
+            onDecline={() => {
+              setCameraPositionConsent("denied");
+              this.renderCameraPositionConsent(false);
+            }}
+          />
+        </Themed>
+      ) : null,
+    );
   }
 
   private showRouteDisambiguation(context: RouteClickContext): void {
@@ -633,8 +745,6 @@ export class Map {
   }
 
   private ensureSelectedHighlightLayer(): void {
-    this.removeLegacyRouteHighlightLayers();
-
     this.ensureHighlightSourceAndGlowLayer(
       SELECTED_SOURCE_ID,
       SELECTED_GLOW_LAYER_ID,
@@ -651,15 +761,7 @@ export class Map {
       ROUTE_HIGHLIGHT_ORANGE_GLOW,
     );
 
-    this.repositionHighlightGlowAboveRoutes();
-  }
-
-  private removeLegacyRouteHighlightLayers(): void {
-    for (const layerId of LEGACY_ROUTE_HIGHLIGHT_LAYER_IDS) {
-      if (this.map.getLayer(layerId)) {
-        this.map.removeLayer(layerId);
-      }
-    }
+    this.repositionSelectedHighlightLayers();
   }
 
   /** Layer id to insert highlight layers before (= draw on top of all route MVT layers). */
@@ -683,21 +785,26 @@ export class Map {
     return style.layers[lastRouteLayerIndex + 1]?.id;
   }
 
-  private repositionHighlightGlowAboveRoutes(): void {
+  private repositionSelectedHighlightLayers(): void {
     const insertBeforeId = this.getRouteHighlightInsertBeforeLayerId();
+    if (!insertBeforeId) {
+      return;
+    }
 
-    for (const layerId of ROUTE_HIGHLIGHT_GLOW_LAYER_IDS) {
-      if (this.map.getLayer(layerId)) {
-        if (insertBeforeId) {
+    for (const glowLayerId of ROUTE_HIGHLIGHT_GLOW_LAYER_IDS) {
+      const stackBottomToTop = [
+        highlightOutlineLayerId(glowLayerId),
+        glowLayerId,
+        highlightCasingLayerId(glowLayerId),
+        highlightCoreLayerId(glowLayerId),
+        highlightLabelStripeLayerId(glowLayerId),
+        highlightLabelLayerId(glowLayerId),
+      ];
+
+      for (const layerId of stackBottomToTop) {
+        if (this.map.getLayer(layerId)) {
           this.map.moveLayer(layerId, insertBeforeId);
-        } else {
-          this.map.moveLayer(layerId);
         }
-      }
-
-      const outlineLayerId = highlightOutlineLayerId(layerId);
-      if (this.map.getLayer(outlineLayerId)) {
-        this.map.moveLayer(outlineLayerId, layerId);
       }
     }
   }
@@ -715,6 +822,141 @@ export class Map {
     }
 
     this.ensureHighlightGlowLayer(glowLayerId, sourceId, glow);
+    this.ensureHighlightRouteOverlayLayers(glowLayerId, sourceId);
+  }
+
+  private ensureHighlightRouteOverlayLayers(
+    glowLayerId: string,
+    sourceId: string,
+  ): void {
+    const routeLineColor = highlightRouteLineColor();
+    const lineLayout: maplibregl.LineLayerSpecification["layout"] = {
+      "line-cap": "round",
+      "line-join": "round",
+    };
+
+    this.ensureHighlightLineLayer(
+      highlightCasingLayerId(glowLayerId),
+      sourceId,
+      {
+        paint: {
+          "line-color": "#ffffff",
+          "line-width": ROUTE_HIGHLIGHT_CASING_LINE_WIDTH,
+          "line-opacity": 0.95,
+        },
+        layout: lineLayout,
+        filter: ROUTE_HIGHLIGHT_ROUTE_FILTER,
+      },
+    );
+
+    this.ensureHighlightLineLayer(
+      highlightCoreLayerId(glowLayerId),
+      sourceId,
+      {
+        paint: {
+          "line-color": routeLineColor,
+          "line-width": ROUTE_HIGHLIGHT_CORE_LINE_WIDTH,
+        },
+        layout: lineLayout,
+        filter: ROUTE_HIGHLIGHT_ROUTE_FILTER,
+      },
+    );
+
+    this.ensureHighlightSymbolLayer(
+      highlightLabelStripeLayerId(glowLayerId),
+      sourceId,
+      {
+        minzoom: 11,
+        layout: {
+          "symbol-placement": "line",
+          "text-field": ROUTE_HIGHLIGHT_LABEL_TEXT,
+          "text-font": ["Noto Sans Bold"],
+          "text-size": 12,
+        },
+        paint: {
+          "text-color": routeLineColor,
+          "text-halo-color": routeLineColor,
+          "text-halo-width": 5,
+        },
+        filter: ROUTE_HIGHLIGHT_ROUTE_FILTER,
+      },
+    );
+
+    this.ensureHighlightSymbolLayer(
+      highlightLabelLayerId(glowLayerId),
+      sourceId,
+      {
+        minzoom: 11,
+        layout: {
+          "symbol-placement": "line",
+          "text-field": ROUTE_HIGHLIGHT_LABEL_TEXT,
+          "text-font": ["Noto Sans Regular"],
+          "text-size": 12,
+        },
+        paint: {
+          "text-color": "#212121",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 1.75,
+        },
+        filter: ROUTE_HIGHLIGHT_ROUTE_FILTER,
+      },
+    );
+  }
+
+  private ensureHighlightLineLayer(
+    layerId: string,
+    sourceId: string,
+    options: {
+      paint: maplibregl.LineLayerSpecification["paint"];
+      layout?: maplibregl.LineLayerSpecification["layout"];
+      filter?: maplibregl.ExpressionFilterSpecification;
+    },
+  ): void {
+    if (this.map.getLayer(layerId)) {
+      return;
+    }
+
+    const insertBeforeId = this.getRouteHighlightInsertBeforeLayerId();
+    this.map.addLayer(
+      {
+        id: layerId,
+        type: "line",
+        source: sourceId,
+        paint: options.paint,
+        layout: options.layout,
+        filter: options.filter,
+      },
+      insertBeforeId,
+    );
+  }
+
+  private ensureHighlightSymbolLayer(
+    layerId: string,
+    sourceId: string,
+    options: {
+      minzoom?: number;
+      layout: maplibregl.SymbolLayerSpecification["layout"];
+      paint: maplibregl.SymbolLayerSpecification["paint"];
+      filter?: maplibregl.ExpressionFilterSpecification;
+    },
+  ): void {
+    if (this.map.getLayer(layerId)) {
+      return;
+    }
+
+    const insertBeforeId = this.getRouteHighlightInsertBeforeLayerId();
+    this.map.addLayer(
+      {
+        id: layerId,
+        type: "symbol",
+        source: sourceId,
+        minzoom: options.minzoom,
+        layout: options.layout,
+        paint: options.paint,
+        filter: options.filter,
+      },
+      insertBeforeId,
+    );
   }
 
   private ensureHighlightGlowLayer(
@@ -806,7 +1048,24 @@ export class Map {
     const source = this.map.getSource(sourceId) as maplibregl.GeoJSONSource;
     source.setData({
       type: "FeatureCollection",
-      features: features.flatMap((feature) => featuresForHighlight(feature)),
+      features: features.flatMap((feature) =>
+        featuresForHighlight(feature).map((highlightFeature) => {
+          if (highlightFeature.properties.type !== FeatureType.Route) {
+            return highlightFeature;
+          }
+          const { osmColour } = highlightFeature.properties;
+          if (!osmColour) {
+            return highlightFeature;
+          }
+          return {
+            ...highlightFeature,
+            properties: {
+              ...highlightFeature.properties,
+              color: osmColour,
+            },
+          };
+        }),
+      ),
     });
   }
 

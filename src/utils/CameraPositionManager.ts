@@ -1,4 +1,5 @@
 import * as maplibregl from "maplibre-gl";
+import { hasCameraPositionStorageConsent } from "./cameraPositionConsent";
 
 export interface CameraPosition {
   center: maplibregl.LngLatLike;
@@ -47,6 +48,10 @@ export class CameraPositionManager {
   }
 
   private getCameraFromLocalStorage(): CameraPosition | null {
+    if (!hasCameraPositionStorageConsent()) {
+      return null;
+    }
+
     const lat = localStorage.getItem("slippy.lat");
     const lng = localStorage.getItem("slippy.lng");
     const zoom = localStorage.getItem("slippy.zoom");
@@ -118,6 +123,10 @@ export class CameraPositionManager {
     bearing: number,
     pitch: number,
   ): void {
+    if (!hasCameraPositionStorageConsent()) {
+      return;
+    }
+
     localStorage.setItem("slippy.lat", center.lat.toString());
     localStorage.setItem("slippy.lng", center.lng.toString());
     localStorage.setItem("slippy.zoom", zoom.toString());

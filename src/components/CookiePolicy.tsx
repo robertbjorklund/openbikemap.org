@@ -21,11 +21,12 @@ export const CookiePolicy: React.FunctionComponent = () => {
       </Typography>
       <Typography paragraph>
         We save a few preferences locally in your browser (not sent to our
-        servers): map position, zoom, bearing, pitch, basemap choice (terrain or
-        satellite), and unit system (metric or imperial). MTB and bicycle route
-        filter settings apply for your current session only and are reset when
-        you reload the page. You can clear stored preferences at any time
-        through your browser settings.
+        servers): basemap choice (terrain or satellite), and unit system
+        (metric or imperial). The first time you click the map, we ask whether
+        to remember map position, zoom, bearing, and pitch for your next visit.
+        MTB and bicycle route filter settings apply for your current session only
+        and are reset when you reload the page. You can clear stored preferences
+        at any time through your browser settings.
       </Typography>
 
       <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
