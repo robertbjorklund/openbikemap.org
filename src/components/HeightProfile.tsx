@@ -39,6 +39,7 @@ export interface HeightProfileProps {
   elevationData: ElevationData;
   resolution: number;
   map?: maplibregl.Map;
+  compact?: boolean;
 }
 
 interface ProfileSnap {
@@ -408,14 +409,22 @@ export const HeightProfile: React.FunctionComponent<HeightProfileProps> = (
   };
 
   return (
-    <div className="height-profile" onMouseLeave={clearMarker}>
+    <div
+      className={
+        props.compact
+          ? "height-profile height-profile-compact"
+          : "height-profile"
+      }
+      onMouseLeave={clearMarker}
+    >
       <Line
         data={data}
         plugins={plugins}
         options={{
           animation: { duration: 0 },
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: !props.compact,
+          aspectRatio: props.compact ? 2.2 : 2,
           elements: {
             line: { tension: 0.3 },
             point: { radius: 0 },

@@ -3,7 +3,7 @@ import { debounce } from "throttle-debounce";
 import type MapFilters from "../MapFilters";
 import { FeatureType, type MapFeature } from "../types/FeatureTypes";
 import { findRelatedFeatures } from "../utils/FeatureGroup";
-import { pickDistinctRoutesAtPoint } from "../utils/pickRoutesAtMapPoint";
+import { pickDistinctRoutesAtPoint, pickDistinctTrailsAtPoint } from "../utils/pickRoutesAtMapPoint";
 import EventBus from "./EventBus";
 import { mapFeatureFromMvt } from "./MvtFeature";
 import type { RouteGroupSelection } from "./SelectedObject";
@@ -16,6 +16,8 @@ export interface RouteClickContext {
   focusClickX: number;
 }
 
+export type TrailClickContext = RouteClickContext;
+
 export interface RouteInteractionCallbacks {
   getRouteGroup: () => RouteGroupSelection | null;
   /** When set, only routes in this group accept clicks. */
@@ -23,6 +25,7 @@ export interface RouteInteractionCallbacks {
   getMapFilters: () => MapFilters;
   onStageHover: (stageId: string | null, point?: maplibregl.Point) => void;
   onRouteDisambiguation: (context: RouteClickContext) => void;
+  onTrailDisambiguation: (context: TrailClickContext) => void;
 }
 
 export class MapInteractionManager {
@@ -68,6 +71,10 @@ export class MapInteractionManager {
 
   private getRouteTappableLayerIds(): string[] {
     return this.getTappableLayerIds().filter((id) => id.includes("route"));
+  }
+
+  private getTrailTappableLayerIds(): string[] {
+    return this.getTappableLayerIds().filter((id) => id.includes("trail"));
   }
 
   private attachListeners() {
@@ -150,6 +157,86 @@ export class MapInteractionManager {
     });
   }
 
+  private handleRouteLayerClick(
+    point: maplibregl.PointLike,
+    focusLngLat: [number, number],
+    focusClickX: number,
+    lockedGroupId: string | null,
+  ): void {
+    const candidates = pickDistinctRoutesAtPoint(
+      this.map,
+      point,
+      this.getRouteTappableLayerIds(),
+      this.callbacks.getMapFilters(),
+    );
+    if (candidates.length === 0) {
+      return;
+    }
+
+    if (lockedGroupId) {
+      const otherRoutes = candidates.filter(
+        (feature) =>
+          feature.properties.type === FeatureType.Route &&
+          (feature.properties.groupId ?? feature.properties.id) !==
+            lockedGroupId,
+      );
+      if (otherRoutes.length === 0) {
+        const picked = this.pickRouteFeatureInGroupAtPoint(
+          point,
+          lockedGroupId,
+        );
+        if (!picked) {
+          return;
+        }
+        const routeGroup = this.callbacks.getRouteGroup();
+        if (
+          routeGroup &&
+          picked.properties.type === FeatureType.Route &&
+          picked.properties.stageId
+        ) {
+          this.eventBus.selectRouteStage(picked.properties.stageId);
+        }
+        return;
+      }
+    }
+
+    if (candidates.length === 1) {
+      this.openMapFeature(candidates[0], focusLngLat, focusClickX);
+      return;
+    }
+
+    this.callbacks.onRouteDisambiguation({
+      candidates,
+      focusLngLat,
+      focusClickX,
+    });
+  }
+
+  private handleTrailLayerClick(
+    point: maplibregl.PointLike,
+    focusLngLat: [number, number],
+    focusClickX: number,
+  ): void {
+    const candidates = pickDistinctTrailsAtPoint(
+      this.map,
+      point,
+      this.getTrailTappableLayerIds(),
+      this.callbacks.getMapFilters(),
+    );
+    if (candidates.length === 0) {
+      return;
+    }
+    if (candidates.length === 1) {
+      this.openMapFeature(candidates[0], focusLngLat, focusClickX);
+      return;
+    }
+    this.callbacks.onTrailDisambiguation({
+      candidates,
+      focusLngLat,
+      focusClickX,
+    });
+  }
+
   private onMapMouseMove = (e: maplibregl.MapMouseEvent) => {
     if (!this.interactionsEnabled) {
       return;
@@ -190,45 +277,20 @@ export class MapInteractionManager {
       const focusClickX = e.point.x;
       const lockedGroupId = this.callbacks.getLockedRouteGroupId();
       const isRouteLayer = sourceLayer === "routes";
+      const isTrailLayer = sourceLayer === "trails";
 
-      if (lockedGroupId && isRouteLayer) {
-        const picked = this.pickRouteFeatureInGroupAtPoint(
+      if (isRouteLayer) {
+        this.handleRouteLayerClick(
           e.point,
+          focusLngLat,
+          focusClickX,
           lockedGroupId,
         );
-        if (!picked) {
-          return;
-        }
-        const routeGroup = this.callbacks.getRouteGroup();
-        if (
-          routeGroup &&
-          picked.properties.type === FeatureType.Route &&
-          picked.properties.stageId
-        ) {
-          this.eventBus.selectRouteStage(picked.properties.stageId);
-        }
         return;
       }
 
-      if (isRouteLayer) {
-        const candidates = pickDistinctRoutesAtPoint(
-          this.map,
-          e.point,
-          this.getRouteTappableLayerIds(),
-          this.callbacks.getMapFilters(),
-        );
-        if (candidates.length === 0) {
-          return;
-        }
-        if (candidates.length === 1) {
-          this.openMapFeature(candidates[0], focusLngLat, focusClickX);
-          return;
-        }
-        this.callbacks.onRouteDisambiguation({
-          candidates,
-          focusLngLat,
-          focusClickX,
-        });
+      if (isTrailLayer) {
+        this.handleTrailLayerClick(e.point, focusLngLat, focusClickX);
         return;
       }
 

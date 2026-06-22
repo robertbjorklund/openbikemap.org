@@ -3,10 +3,14 @@ import { isFeatureVisibleUnderFilters } from "../components/MapFilterRules";
 import { mapFeatureFromMvt } from "../components/MvtFeature";
 import type MapFilters from "../MapFilters";
 import { formatRouteDisplayTitle } from "../types/RouteNetwork";
-import { FeatureType, type MapFeature, type RouteFeature } from "../types/FeatureTypes";
+import { FeatureType, type MapFeature, type RouteFeature, type TrailFeature } from "../types/FeatureTypes";
+import { getFeatureDisplayTitle } from "./featureDisplayTitle";
 
 /** Pick radius around the click — helps when lines are stacked tightly. */
-export const ROUTE_PICK_RADIUS_PX = 10;
+export const FEATURE_PICK_RADIUS_PX = 10;
+
+/** @deprecated Use FEATURE_PICK_RADIUS_PX */
+export const ROUTE_PICK_RADIUS_PX = FEATURE_PICK_RADIUS_PX;
 
 const BICYCLE_NETWORK_SORT_ORDER: Record<string, number> = {
   icn: 0,
@@ -78,7 +82,7 @@ export function pickDistinctRoutesAtPoint(
   point: maplibregl.PointLike,
   routeLayerIds: string[],
   filters: MapFilters,
-  radiusPx = ROUTE_PICK_RADIUS_PX,
+  radiusPx = FEATURE_PICK_RADIUS_PX,
 ): MapFeature[] {
   if (routeLayerIds.length === 0) {
     return [];
@@ -120,4 +124,74 @@ export function pickDistinctRoutesAtPoint(
   }
 
   return sortRouteDisambiguationCandidates(candidates);
+}
+
+/** One entry per trail feature id. */
+export function trailDisambiguationKey(feature: MapFeature): string {
+  return feature.properties.id;
+}
+
+export function sortTrailDisambiguationCandidates(
+  features: MapFeature[],
+): MapFeature[] {
+  const trails = features.filter(
+    (feature): feature is TrailFeature =>
+      feature.properties.type === FeatureType.Trail,
+  );
+  return [...trails].sort((left, right) =>
+    getFeatureDisplayTitle(left).localeCompare(
+      getFeatureDisplayTitle(right),
+      undefined,
+      { sensitivity: "base" },
+    ),
+  );
+}
+
+export function pickDistinctTrailsAtPoint(
+  map: maplibregl.Map,
+  point: maplibregl.PointLike,
+  trailLayerIds: string[],
+  filters: MapFilters,
+  radiusPx = FEATURE_PICK_RADIUS_PX,
+): MapFeature[] {
+  if (trailLayerIds.length === 0) {
+    return [];
+  }
+
+  const hits = map.queryRenderedFeatures(pickBBoxFromPoint(point, radiusPx), {
+    layers: trailLayerIds,
+  });
+
+  const seen = new Set<string>();
+  const candidates: MapFeature[] = [];
+
+  for (const hit of hits) {
+    const sourceLayer = (
+      hit.layer as { "source-layer"?: string } | undefined
+    )?.["source-layer"];
+    if (sourceLayer !== "trails") {
+      continue;
+    }
+
+    const mapFeature = mapFeatureFromMvt(
+      hit as maplibregl.MapGeoJSONFeature,
+      sourceLayer,
+    );
+    if (
+      !mapFeature ||
+      mapFeature.properties.type !== FeatureType.Trail ||
+      !isFeatureVisibleUnderFilters(mapFeature, filters)
+    ) {
+      continue;
+    }
+
+    const key = trailDisambiguationKey(mapFeature);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    candidates.push(mapFeature);
+  }
+
+  return sortTrailDisambiguationCandidates(candidates);
 }

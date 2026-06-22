@@ -45,6 +45,8 @@ import { ScrollableCard } from "./ScrollableCard";
 
 import { SourceSummary } from "./SourceSummary";
 
+import { FeatureWeather } from "./FeatureWeather";
+
 import { useUnitSystem } from "./UnitSystemManager";
 
 
@@ -61,6 +63,8 @@ function TrailInfoBody({
 
   map,
 
+  weatherEnabled = true,
+
 }: {
 
   feature: TrailFeature;
@@ -72,6 +76,8 @@ function TrailInfoBody({
   compactMobile?: boolean;
 
   map?: maplibregl.Map;
+
+  weatherEnabled?: boolean;
 
 }) {
 
@@ -217,6 +223,14 @@ function TrailInfoBody({
 
       )}
 
+      {!compactMobile && (
+        <FeatureWeather
+          feature={feature}
+          compact={false}
+          enabled={weatherEnabled}
+        />
+      )}
+
       {!compactMobile && <ElevationStats feature={feature} map={map} />}
 
       {showPanelActions && (
@@ -226,6 +240,10 @@ function TrailInfoBody({
             <InfoPanelActions feature={feature} />
           </Box>
         </>
+      )}
+
+      {compactMobile && (
+        <FeatureWeather feature={feature} compact enabled={weatherEnabled} />
       )}
 
       {compactMobile && <ElevationStats feature={feature} map={map} />}
@@ -282,6 +300,8 @@ export const TrailInfo: React.FunctionComponent<{
 
   map?: maplibregl.Map;
 
+  weatherEnabled?: boolean;
+
 }> = (props) => {
 
   const showTitle = props.showFeatureTitle ?? true;
@@ -301,6 +321,8 @@ export const TrailInfo: React.FunctionComponent<{
         compactMobile={props.compactMobile ?? false}
 
         map={props.map}
+
+        weatherEnabled={props.weatherEnabled ?? true}
 
       />
 

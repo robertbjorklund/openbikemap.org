@@ -7,6 +7,7 @@ import {
   getRouteLinkKeys,
   matchesGroupKey,
 } from "../types/FeatureGroupKeys";
+import { mergeElevationProfilesFromFeatures } from "./geometryElevationPath";
 
 export type { FeatureGroupKey, RouteGroupKey, TrailGroupKey } from "../types/FeatureGroupKeys";
 export {
@@ -192,6 +193,7 @@ export function mergeSegmentGroup(
         ...primary.properties,
         lengthMeters:
           totalLength > 0 ? totalLength : primary.properties.lengthMeters,
+        elevationProfile: mergeElevationProfilesFromFeatures(uniqueSegments),
       },
     };
   }
@@ -199,7 +201,10 @@ export function mergeSegmentGroup(
   return {
     type: "Feature",
     geometry,
-    properties: primary.properties,
+    properties: {
+      ...primary.properties,
+      elevationProfile: mergeElevationProfilesFromFeatures(uniqueSegments),
+    },
   };
 }
 

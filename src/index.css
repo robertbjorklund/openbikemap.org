@@ -96,9 +96,31 @@ body {
   color: #666;
 }
 
+.weather-days-scroll {
+  scrollbar-width: none;
+}
+
+.weather-days-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.feature-weather + .distance-and-elevation-info,
+.feature-weather + .height-profile {
+  margin-top: 0;
+}
+
 .height-profile {
   margin-top: 20px;
   position: relative;
+}
+
+.height-profile-compact {
+  margin-top: 12px;
+  max-height: 160px;
+}
+
+.height-profile-compact canvas {
+  max-height: 160px;
 }
 
 .height-profile-overlay {

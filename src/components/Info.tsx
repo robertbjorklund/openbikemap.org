@@ -21,10 +21,12 @@ export const Info: React.FunctionComponent<{
   showFeatureTitle?: boolean;
   compactMobile?: boolean;
   map?: maplibregl.Map;
+  weatherEnabled?: boolean;
 }> = (props) => {
   const { feature } = props;
   const showFeatureTitle = props.showFeatureTitle ?? true;
   const compactMobile = props.compactMobile ?? false;
+  const weatherEnabled = props.weatherEnabled ?? true;
 
   if (feature.properties.type === FeatureType.Trail) {
     return (
@@ -36,6 +38,7 @@ export const Info: React.FunctionComponent<{
         showFeatureTitle={showFeatureTitle}
         compactMobile={compactMobile}
         map={props.map}
+        weatherEnabled={weatherEnabled}
       />
     );
   }
@@ -50,6 +53,7 @@ export const Info: React.FunctionComponent<{
       showFeatureTitle={showFeatureTitle}
       compactMobile={compactMobile}
       map={props.map}
+      weatherEnabled={weatherEnabled}
     />
   );
 };

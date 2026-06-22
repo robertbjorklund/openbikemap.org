@@ -169,11 +169,26 @@ Wait 1–5 minutes, then test:
 
 ## 8. Updating data later
 
-1. Re-run processor locally (or on a bigger machine).
+1. Re-run processor locally (or on a bigger machine). For elevation profiles on trails/routes, add `-Elevation` when running tile scripts (see `tiles.openbikemap.org` README).
 2. `scp` new files to `/opt/openbikemap/data/`.
 3. `cp` new mbtiles into `tiles/mbtiles/`.
 4. `docker compose -f docker-compose.prod.yml restart` in `tiles/`.
 5. Re-import API: `docker compose -f docker-compose.prod.yaml exec app npm run import-data:prod -- /data/trails.geojson /data/routes.geojson`
+
+**Automated (local PC):** schedule commit, push, and VPS upload in one job:
+
+```powershell
+cd C:\DEV\openbikemap.org
+.\scripts\schedule-deploy-today.ps1 -Time 19:00
+```
+
+At the scheduled time, `deploy-vps-scheduled.cmd` runs `commit-and-push.ps1` (frontend → Cloudflare via GitHub), then `deploy-vps-data.ps1 -WaitForRebuild`. Log: `scripts/deploy-vps-scheduled.log`.
+
+Run immediately without rescheduling:
+
+```powershell
+.\scripts\deploy-vps-scheduled.cmd
+```
 
 ---
 

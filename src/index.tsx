@@ -13,12 +13,12 @@ import { applyUiTheme } from "./uiTheme";
 import { CameraPositionManager } from "./utils/CameraPositionManager";
 import { initCloudflareAnalytics } from "./utils/cloudflareAnalytics";
 import { initMatomo, trackAppPageView } from "./utils/matomo";
+import { syncPageMetadata } from "./utils/pageMetadata";
 
 function initialize() {
   applyUiTheme();
   initCloudflareAnalytics();
   initMatomo();
-  trackAppPageView();
 
   if (AppConfig.showBetaBanner) {
     document.documentElement.style.setProperty(
@@ -102,14 +102,16 @@ function initialize() {
       map.flyTo(changes.latestMarker.coordinates);
     }
 
+    syncPageMetadata(state);
+
     if (changes.selectedObject !== undefined) {
-      trackAppPageView();
+      trackAppPageView(document.title);
     } else if (
       changes.sidePanelView !== undefined ||
       changes.appPanelTab !== undefined
     ) {
       if (state.sidePanelView === "app" && state.appPanelTab === "about") {
-        trackAppPageView();
+        trackAppPageView(document.title);
       }
     }
   }

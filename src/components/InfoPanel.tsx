@@ -5,7 +5,6 @@ import {
   toMtbImbaScaleFilter,
   toMtbScaleFilter,
 } from "../types/BikeActivity";
-import { formatRouteDisplayTitle } from "../types/RouteNetwork";
 import {
   FeatureType,
   TrailCategory,
@@ -13,7 +12,8 @@ import {
   type RouteFeature,
   type TrailFeature,
 } from "../types/FeatureTypes";
-import { getDefaultFeatureTitle, getMapFeatureKind } from "../utils/MapFeatureKind";
+import { getFeatureDisplayTitle } from "../utils/featureDisplayTitle";
+import { getMapFeatureKind } from "../utils/MapFeatureKind";
 import EventBus from "./EventBus";
 import type { RouteGroupSelection } from "./SelectedObject";
 import { Info } from "./Info";
@@ -29,18 +29,6 @@ import { useMobilePanelLayout } from "./useMobilePanelLayout";
 const PANEL_TITLE_ICON_SIZE = 32;
 const MOBILE_ROUTE_HEADER_ICON_SIZE = 26;
 const MOBILE_ROUTE_SHIELD_SIZE = 28;
-
-function featurePanelTitle(feature: MapFeature): string {
-  const { properties } = feature;
-  if (properties.type === FeatureType.Trail) {
-    return (
-      properties.name ||
-      properties.ref ||
-      getDefaultFeatureTitle(feature)
-    );
-  }
-  return formatRouteDisplayTitle(properties.name, properties.ref);
-}
 
 function featurePanelTitleIcon(feature: MapFeature): React.ReactNode | undefined {
   const { properties } = feature;
@@ -94,6 +82,7 @@ export const InfoPanel: React.FunctionComponent<{
 }> = (props) => {
   const isMobile = useMobilePanelLayout();
   const compactMobilePanel = isMobile;
+  const weatherEnabled = !compactMobilePanel || (props.routeDetailsExpanded ?? true);
   const featureKind = getMapFeatureKind(props.feature);
 
   const headerCenter = compactMobilePanel ? (
@@ -133,7 +122,7 @@ export const InfoPanel: React.FunctionComponent<{
         sx={{ fontWeight: 600, flex: 1, minWidth: 0, mb: 0, overflow: "hidden" }}
       >
         <OverflowScrollText autoScroll>
-          {featurePanelTitle(props.feature)}
+          {getFeatureDisplayTitle(props.feature)}
         </OverflowScrollText>
       </Typography>
     </Box>
@@ -143,7 +132,7 @@ export const InfoPanel: React.FunctionComponent<{
 
   return (
     <PanelShell
-      title={compactMobilePanel ? undefined : featurePanelTitle(props.feature)}
+      title={compactMobilePanel ? undefined : getFeatureDisplayTitle(props.feature)}
       titleIcon={
         compactMobilePanel ? undefined : featurePanelTitleIcon(props.feature)
       }
@@ -168,6 +157,7 @@ export const InfoPanel: React.FunctionComponent<{
         showFeatureTitle={false}
         compactMobile={compactMobilePanel}
         map={props.map}
+        weatherEnabled={weatherEnabled}
       />
     </PanelShell>
   );

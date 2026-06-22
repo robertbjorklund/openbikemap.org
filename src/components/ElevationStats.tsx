@@ -2,8 +2,13 @@ import { Typography } from "@mui/material";
 import type * as maplibregl from "maplibre-gl";
 import * as React from "react";
 import type { MapFeature } from "../types/FeatureTypes";
-import { getFeatureElevationData } from "../utils/getFeatureElevationData";
+import {
+  featureSupportsElevationChart,
+  getFeatureElevationData,
+  getFeatureElevationDisplayLine,
+} from "../utils/getFeatureElevationData";
 import { HeightProfile } from "./HeightProfile";
+import { useMobilePanelLayout } from "./useMobilePanelLayout";
 import { useUnitSystem } from "./UnitSystemManager";
 import { formattedSlope } from "./utils/formattedSlope";
 import * as UnitHelpers from "./utils/UnitHelpers";
@@ -13,17 +18,19 @@ export const ElevationStats: React.FunctionComponent<{
   map?: maplibregl.Map;
 }> = ({ feature, map }) => {
   const unitSystem = useUnitSystem();
+  const compactMobilePanel = useMobilePanelLayout();
   const elevationData = React.useMemo(
     () => getFeatureElevationData(feature),
     [feature],
   );
 
-  if (!elevationData) {
+  if (!elevationData || !featureSupportsElevationChart(feature)) {
     return null;
   }
 
   const profile = feature.properties.elevationProfile;
-  if (!profile || feature.geometry.type !== "LineString") {
+  const displayLine = getFeatureElevationDisplayLine(feature);
+  if (!profile || !displayLine) {
     return null;
   }
 
@@ -69,11 +76,12 @@ export const ElevationStats: React.FunctionComponent<{
         </Typography>
       )}
       <HeightProfile
-        displayGeometry={feature.geometry as GeoJSON.LineString}
+        displayGeometry={displayLine}
         profileGeometry={elevationData.profileGeometry}
         elevationData={elevationData}
         resolution={profile.resolution}
         map={map}
+        compact={compactMobilePanel}
       />
     </>
   );

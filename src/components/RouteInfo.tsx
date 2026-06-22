@@ -35,6 +35,8 @@ import { ScrollableCard } from "./ScrollableCard";
 
 import { SourceSummary } from "./SourceSummary";
 
+import { FeatureWeather } from "./FeatureWeather";
+
 import type { RouteGroupSelection } from "./SelectedObject";
 
 import { useUnitSystem } from "./UnitSystemManager";
@@ -57,6 +59,8 @@ function RouteInfoBody({
 
   map,
 
+  weatherEnabled = true,
+
 }: {
 
   feature: RouteFeature;
@@ -72,6 +76,8 @@ function RouteInfoBody({
   compactMobile?: boolean;
 
   map?: maplibregl.Map;
+
+  weatherEnabled?: boolean;
 
 }) {
 
@@ -199,6 +205,16 @@ function RouteInfoBody({
 
       )}
 
+      {!compactMobile && (
+        <FeatureWeather
+          feature={feature}
+          routeGroup={routeGroup}
+          compact={false}
+          enabled={weatherEnabled}
+          eventBus={eventBus}
+        />
+      )}
+
       {!compactMobile && <ElevationStats feature={feature} map={map} />}
 
       {showPanelActions && (
@@ -208,6 +224,16 @@ function RouteInfoBody({
             <InfoPanelActions feature={feature} />
           </Box>
         </>
+      )}
+
+      {compactMobile && (
+        <FeatureWeather
+          feature={feature}
+          routeGroup={routeGroup}
+          compact
+          enabled={weatherEnabled}
+          eventBus={eventBus}
+        />
       )}
 
       {compactMobile && <ElevationStats feature={feature} map={map} />}
@@ -266,6 +292,8 @@ export const RouteInfo: React.FunctionComponent<{
 
   map?: maplibregl.Map;
 
+  weatherEnabled?: boolean;
+
 }> = (props) => {
 
   const showTitle = props.showFeatureTitle ?? true;
@@ -289,6 +317,8 @@ export const RouteInfo: React.FunctionComponent<{
         compactMobile={props.compactMobile ?? false}
 
         map={props.map}
+
+        weatherEnabled={props.weatherEnabled ?? true}
 
       />
 

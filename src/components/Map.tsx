@@ -32,8 +32,10 @@ import {
 import {
   MapInteractionManager,
   type RouteClickContext,
+  type TrailClickContext,
 } from "./MapInteractionManager";
 import { RouteDisambiguationDialog } from "./RouteDisambiguationDialog";
+import { TrailDisambiguationDialog } from "./TrailDisambiguationDialog";
 import { Themed } from "./Themed";
 import { EsriAttribution } from "./EsriAttribution";
 import { FilterControl } from "./FilterControl";
@@ -212,6 +214,8 @@ export class Map {
   private eventBus: EventBus;
   private routeDisambiguationHost: HTMLDivElement;
   private routeDisambiguationRoot: ReactDOM.Root | null = null;
+  private trailDisambiguationHost: HTMLDivElement;
+  private trailDisambiguationRoot: ReactDOM.Root | null = null;
 
   constructor(
     cameraPosition: CameraPosition,
@@ -244,12 +248,16 @@ export class Map {
     this.routeDisambiguationHost = document.createElement("div");
     this.map.getContainer().appendChild(this.routeDisambiguationHost);
 
+    this.trailDisambiguationHost = document.createElement("div");
+    this.map.getContainer().appendChild(this.trailDisambiguationHost);
+
     new MapInteractionManager(this.map, eventBus, {
       getRouteGroup: () => this.routeGroupSelection,
       getLockedRouteGroupId: () => this.getLockedRouteGroupId(),
       getMapFilters: () => this.currentFilters,
       onStageHover: (stageId, point) => this.setHoveredRouteStage(stageId, point),
       onRouteDisambiguation: (context) => this.showRouteDisambiguation(context),
+      onTrailDisambiguation: (context) => this.showTrailDisambiguation(context),
     });
 
     this.sidePanelControl = new SidePanelControl(
@@ -422,6 +430,7 @@ export class Map {
 
   setSelectedObject(selectedObject: SelectedObject | null | undefined): void {
     this.closeRouteDisambiguation();
+    this.closeTrailDisambiguation();
     this.routeGroupSelection = selectedObject?.routeGroup ?? null;
     this.hoveredStageId = null;
     this.hideStageTooltip();
@@ -432,11 +441,50 @@ export class Map {
   }
 
   private showRouteDisambiguation(context: RouteClickContext): void {
+    this.closeTrailDisambiguation();
     this.renderRouteDisambiguation(context);
   }
 
   private closeRouteDisambiguation(): void {
     this.renderRouteDisambiguation(null);
+  }
+
+  private showTrailDisambiguation(context: TrailClickContext): void {
+    this.closeRouteDisambiguation();
+    this.renderTrailDisambiguation(context);
+  }
+
+  private closeTrailDisambiguation(): void {
+    this.renderTrailDisambiguation(null);
+  }
+
+  private renderTrailDisambiguation(context: TrailClickContext | null): void {
+    if (!this.trailDisambiguationRoot) {
+      this.trailDisambiguationRoot = ReactDOM.createRoot(
+        this.trailDisambiguationHost,
+      );
+    }
+
+    this.trailDisambiguationRoot.render(
+      context ? (
+        <Themed>
+          <TrailDisambiguationDialog
+            open
+            candidates={context.candidates}
+            onSelect={(feature) => {
+              this.closeTrailDisambiguation();
+              this.eventBus.showInfo(feature.properties.id, {
+                clickedFeature: feature,
+                relatedFeatures: findRelatedFeatures(this.map, feature),
+                focusLngLat: context.focusLngLat,
+                focusClickX: context.focusClickX,
+              });
+            }}
+            onClose={() => this.closeTrailDisambiguation()}
+          />
+        </Themed>
+      ) : null,
+    );
   }
 
   private renderRouteDisambiguation(context: RouteClickContext | null): void {
@@ -603,7 +651,7 @@ export class Map {
       ROUTE_HIGHLIGHT_ORANGE_GLOW,
     );
 
-    this.repositionHighlightGlowBelowRoutes();
+    this.repositionHighlightGlowAboveRoutes();
   }
 
   private removeLegacyRouteHighlightLayers(): void {
@@ -614,24 +662,37 @@ export class Map {
     }
   }
 
-  private getRouteHighlightBeforeLayerId(): string | undefined {
-    for (const layerId of ROUTE_LAYER_STACK) {
-      if (this.map.getLayer(layerId)) {
-        return layerId;
+  /** Layer id to insert highlight layers before (= draw on top of all route MVT layers). */
+  private getRouteHighlightInsertBeforeLayerId(): string | undefined {
+    const style = this.map.getStyle();
+    if (!style?.layers) {
+      return undefined;
+    }
+
+    let lastRouteLayerIndex = -1;
+    for (let i = 0; i < style.layers.length; i++) {
+      if ((ROUTE_LAYER_STACK as readonly string[]).includes(style.layers[i].id)) {
+        lastRouteLayerIndex = i;
       }
     }
-    return undefined;
+
+    if (lastRouteLayerIndex === -1) {
+      return undefined;
+    }
+
+    return style.layers[lastRouteLayerIndex + 1]?.id;
   }
 
-  private repositionHighlightGlowBelowRoutes(): void {
-    const beforeId = this.getRouteHighlightBeforeLayerId();
-    if (!beforeId) {
-      return;
-    }
+  private repositionHighlightGlowAboveRoutes(): void {
+    const insertBeforeId = this.getRouteHighlightInsertBeforeLayerId();
 
     for (const layerId of ROUTE_HIGHLIGHT_GLOW_LAYER_IDS) {
       if (this.map.getLayer(layerId)) {
-        this.map.moveLayer(layerId, beforeId);
+        if (insertBeforeId) {
+          this.map.moveLayer(layerId, insertBeforeId);
+        } else {
+          this.map.moveLayer(layerId);
+        }
       }
 
       const outlineLayerId = highlightOutlineLayerId(layerId);
@@ -675,7 +736,7 @@ export class Map {
       return;
     }
 
-    const beforeId = this.getRouteHighlightBeforeLayerId();
+    const insertBeforeId = this.getRouteHighlightInsertBeforeLayerId();
     this.map.addLayer(
       {
         id: layerId,
@@ -692,7 +753,7 @@ export class Map {
           "line-join": "round",
         },
       },
-      beforeId,
+      insertBeforeId,
     );
   }
 
@@ -710,7 +771,7 @@ export class Map {
       return;
     }
 
-    const beforeId = this.getRouteHighlightBeforeLayerId();
+    const insertBeforeId = this.getRouteHighlightInsertBeforeLayerId();
     this.map.addLayer(
       {
         id: layerId,
@@ -727,7 +788,7 @@ export class Map {
           "line-join": "round",
         },
       },
-      beforeId,
+      insertBeforeId,
     );
   }
 
