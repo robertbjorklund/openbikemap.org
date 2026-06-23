@@ -112,15 +112,11 @@ body {
 .height-profile {
   margin-top: 20px;
   position: relative;
+  width: 100%;
 }
 
 .height-profile-compact {
   margin-top: 12px;
-  max-height: 160px;
-}
-
-.height-profile-compact canvas {
-  max-height: 160px;
 }
 
 .height-profile-overlay {

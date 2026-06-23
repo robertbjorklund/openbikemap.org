@@ -31,6 +31,8 @@ Chart.register(Filler);
 const PROFILE_FILL = withAlpha(AppConfig.primaryColor, 0.35);
 const PROFILE_BORDER = "rgba(0, 0, 0, 0.15)";
 const HIGHLIGHT_MAX_DISTANCE_METERS = 200;
+const PROFILE_CHART_HEIGHT_PX = 200;
+const PROFILE_CHART_HEIGHT_COMPACT_PX = 160;
 
 export interface HeightProfileProps {
   /** Geometry shown on the map (e.g. selected trail highlight). */
@@ -382,6 +384,10 @@ export const HeightProfile: React.FunctionComponent<HeightProfileProps> = (
         pointHitRadius: 5,
         pointHoverRadius: 0,
         order: 10,
+        parsing: {
+          xAxisKey: "x",
+          yAxisKey: "y",
+        },
         data: rawElevationsAndDistance,
       },
       ...(highlightPositionX !== null
@@ -393,6 +399,10 @@ export const HeightProfile: React.FunctionComponent<HeightProfileProps> = (
               pointRadius: 0,
               pointHitRadius: 16,
               order: 1,
+              parsing: {
+                xAxisKey: "x",
+                yAxisKey: "y",
+              },
               data: [
                 {
                   x: highlightPositionX,
@@ -408,6 +418,10 @@ export const HeightProfile: React.FunctionComponent<HeightProfileProps> = (
     ],
   };
 
+  const chartHeight = props.compact
+    ? PROFILE_CHART_HEIGHT_COMPACT_PX
+    : PROFILE_CHART_HEIGHT_PX;
+
   return (
     <div
       className={
@@ -415,6 +429,7 @@ export const HeightProfile: React.FunctionComponent<HeightProfileProps> = (
           ? "height-profile height-profile-compact"
           : "height-profile"
       }
+      style={{ height: chartHeight }}
       onMouseLeave={clearMarker}
     >
       <Line
@@ -423,8 +438,11 @@ export const HeightProfile: React.FunctionComponent<HeightProfileProps> = (
         options={{
           animation: { duration: 0 },
           responsive: true,
-          maintainAspectRatio: !props.compact,
-          aspectRatio: props.compact ? 2.2 : 2,
+          maintainAspectRatio: false,
+          parsing: {
+            xAxisKey: "x",
+            yAxisKey: "y",
+          },
           elements: {
             line: { tension: 0.3 },
             point: { radius: 0 },
@@ -442,7 +460,8 @@ export const HeightProfile: React.FunctionComponent<HeightProfileProps> = (
             x: {
               type: "linear",
               min: 0,
-              max: totalDistance,
+              max: Math.max(totalDistance, 1),
+              bounds: "ticks",
               grid: { display: true, color: "rgba(0,0,0,0.05)" },
               ticks: {
                 maxRotation: 0,
