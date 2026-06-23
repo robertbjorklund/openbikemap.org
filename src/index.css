@@ -104,9 +104,8 @@ body {
   display: none;
 }
 
-.feature-weather + .distance-and-elevation-info,
-.feature-weather + .height-profile {
-  margin-top: 0;
+.height-profile + .feature-weather {
+  margin-top: 20px;
 }
 
 .height-profile {

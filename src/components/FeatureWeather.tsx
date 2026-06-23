@@ -4,11 +4,12 @@ import {
   FeatureType,
   type MapFeature,
 } from "../types/FeatureTypes";
-import { getWeatherSamplePoints } from "../utils/weather/weatherSamplePoints";
+import {
+  getWeatherSamplePoints,
+  shouldShowFeatureWeather,
+} from "../utils/weather/weatherSamplePoints";
 import type { WeatherSamplePoint } from "../utils/weather/weatherTypes";
-import EventBus from "./EventBus";
 import type { RouteGroupSelection } from "./SelectedObject";
-import { RouteStageWeatherList } from "./RouteStageWeatherList";
 import {
   WeatherError,
   WeatherForecastDays,
@@ -61,31 +62,16 @@ export const FeatureWeather: React.FunctionComponent<{
   routeGroup?: RouteGroupSelection;
   compact: boolean;
   enabled: boolean;
-  eventBus?: EventBus;
-}> = ({ feature, routeGroup, compact, enabled, eventBus }) => {
+}> = ({ feature, routeGroup, compact, enabled }) => {
   const samplePoints = React.useMemo(
     () => getWeatherSamplePoints(feature),
     [feature],
   );
+  const showWeather = shouldShowFeatureWeather(feature, routeGroup);
   const showPastRain = isMtbWeatherFeature(feature);
   const rainPoint = samplePoints[0];
 
-  if (
-    routeGroup &&
-    !routeGroup.activeStageId &&
-    routeGroup.stageFeatures.length > 1
-  ) {
-    return (
-      <RouteStageWeatherList
-        stages={routeGroup.stageFeatures}
-        enabled={enabled}
-        compact={compact}
-        eventBus={eventBus}
-      />
-    );
-  }
-
-  if (samplePoints.length === 0) {
+  if (!showWeather || samplePoints.length === 0) {
     return null;
   }
 

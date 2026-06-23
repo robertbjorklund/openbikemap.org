@@ -205,17 +205,16 @@ function RouteInfoBody({
 
       )}
 
+      {!compactMobile && <ElevationStats feature={feature} map={map} />}
+
       {!compactMobile && (
         <FeatureWeather
           feature={feature}
           routeGroup={routeGroup}
           compact={false}
           enabled={weatherEnabled}
-          eventBus={eventBus}
         />
       )}
-
-      {!compactMobile && <ElevationStats feature={feature} map={map} />}
 
       {showPanelActions && (
         <>
@@ -226,17 +225,16 @@ function RouteInfoBody({
         </>
       )}
 
+      {compactMobile && <ElevationStats feature={feature} map={map} />}
+
       {compactMobile && (
         <FeatureWeather
           feature={feature}
           routeGroup={routeGroup}
           compact
           enabled={weatherEnabled}
-          eventBus={eventBus}
         />
       )}
-
-      {compactMobile && <ElevationStats feature={feature} map={map} />}
 
       {compactMobile && properties.distance && (
 

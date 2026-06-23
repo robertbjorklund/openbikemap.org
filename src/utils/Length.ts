@@ -11,7 +11,7 @@ function toRadians(degrees: number): number {
   return (degrees * Math.PI) / 180;
 }
 
-function haversineMeters(a: Position, b: Position): number {
+export function positionDistanceMeters(a: Position, b: Position): number {
   const dLat = toRadians(b[1] - a[1]);
   const dLon = toRadians(b[0] - a[0]);
   const lat1 = toRadians(a[1]);
@@ -25,7 +25,7 @@ function haversineMeters(a: Position, b: Position): number {
 function lineLengthMeters(coordinates: Position[]): number {
   let total = 0;
   for (let i = 1; i < coordinates.length; i++) {
-    total += haversineMeters(coordinates[i - 1], coordinates[i]);
+    total += positionDistanceMeters(coordinates[i - 1], coordinates[i]);
   }
   return total;
 }
