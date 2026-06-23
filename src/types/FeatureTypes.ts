@@ -81,6 +81,8 @@ export interface RouteProperties {
   osmRouteType: OsmRouteType;
   /** OSM colour tag (e.g. red, blue) for route=mtb. */
   osmColour: string | null;
+  /** Precomputed map line color when present (MVT tiles). */
+  color?: string | null;
   distance: string | null;
   roundtrip: boolean | null;
   pavedRatio: number | null;

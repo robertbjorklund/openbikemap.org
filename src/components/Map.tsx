@@ -5,7 +5,11 @@ import MapFilters, { defaultMapFilters } from "../MapFilters";
 import { MapMarker } from "../MapMarker";
 import { MAP_STYLE_URLS, MapStyle } from "../MapStyle";
 import { FeatureType, type MapFeature } from "../types/FeatureTypes";
-import { featuresForHighlight, findRelatedFeatures } from "../utils/FeatureGroup";
+import { findRelatedFeatures } from "../utils/FeatureGroup";
+import {
+  normalizeHighlightFeatures,
+  ROUTE_HIGHLIGHT_OVERLAY_FILTER,
+} from "../utils/routeHighlightProperties";
 import { findRouteStageFeature } from "../utils/routeGroupSelection";
 import {
   panMapToCenterFeatureInVisibleArea,
@@ -52,7 +56,6 @@ import { SelectedObject, type RouteGroupSelection } from "./SelectedObject";
 import { SidePanelControl } from "./SidePanelControl";
 import State from "./State";
 import { OPENBIKEMAP_LINE_MIN_ZOOM } from "../constants/OpenBikeMapLayerZoom";
-import { ROUTE_NETWORK_LINE_COLOR_EXPRESSION } from "../types/RouteNetwork";
 import {
   isCameraPositionConsentPending,
   setCameraPositionConsent,
@@ -114,12 +117,6 @@ function highlightLabelLayerId(glowLayerId: string): string {
   return glowLayerId.replace("-line-glow", "-label");
 }
 
-const ROUTE_HIGHLIGHT_ROUTE_FILTER: maplibregl.ExpressionFilterSpecification = [
-  "==",
-  ["get", "type"],
-  FeatureType.Route,
-];
-
 const ROUTE_HIGHLIGHT_LABEL_TEXT: maplibregl.ExpressionSpecification = [
   "coalesce",
   ["get", "name"],
@@ -154,11 +151,11 @@ const ROUTE_HIGHLIGHT_CASING_LINE_WIDTH: maplibregl.ExpressionSpecification = [
   9,
 ];
 
-function highlightRouteLineColor(): maplibregl.ExpressionSpecification {
-  return JSON.parse(
-    JSON.stringify(ROUTE_NETWORK_LINE_COLOR_EXPRESSION),
-  ) as maplibregl.ExpressionSpecification;
-}
+const ROUTE_HIGHLIGHT_LINE_COLOR: maplibregl.ExpressionSpecification = [
+  "coalesce",
+  ["get", "color"],
+  "#7b1fa2",
+];
 
 const ROUTE_HIGHLIGHT_GLOW_WIDTH: maplibregl.ExpressionSpecification = [
   "interpolate",
@@ -829,7 +826,6 @@ export class Map {
     glowLayerId: string,
     sourceId: string,
   ): void {
-    const routeLineColor = highlightRouteLineColor();
     const lineLayout: maplibregl.LineLayerSpecification["layout"] = {
       "line-cap": "round",
       "line-join": "round",
@@ -845,7 +841,7 @@ export class Map {
           "line-opacity": 0.95,
         },
         layout: lineLayout,
-        filter: ROUTE_HIGHLIGHT_ROUTE_FILTER,
+        filter: ROUTE_HIGHLIGHT_OVERLAY_FILTER,
       },
     );
 
@@ -854,11 +850,11 @@ export class Map {
       sourceId,
       {
         paint: {
-          "line-color": routeLineColor,
+          "line-color": ROUTE_HIGHLIGHT_LINE_COLOR,
           "line-width": ROUTE_HIGHLIGHT_CORE_LINE_WIDTH,
         },
         layout: lineLayout,
-        filter: ROUTE_HIGHLIGHT_ROUTE_FILTER,
+        filter: ROUTE_HIGHLIGHT_OVERLAY_FILTER,
       },
     );
 
@@ -874,11 +870,11 @@ export class Map {
           "text-size": 12,
         },
         paint: {
-          "text-color": routeLineColor,
-          "text-halo-color": routeLineColor,
+          "text-color": ROUTE_HIGHLIGHT_LINE_COLOR,
+          "text-halo-color": ROUTE_HIGHLIGHT_LINE_COLOR,
           "text-halo-width": 5,
         },
-        filter: ROUTE_HIGHLIGHT_ROUTE_FILTER,
+        filter: ROUTE_HIGHLIGHT_OVERLAY_FILTER,
       },
     );
 
@@ -898,7 +894,7 @@ export class Map {
           "text-halo-color": "#ffffff",
           "text-halo-width": 1.75,
         },
-        filter: ROUTE_HIGHLIGHT_ROUTE_FILTER,
+        filter: ROUTE_HIGHLIGHT_OVERLAY_FILTER,
       },
     );
   }
@@ -913,6 +909,7 @@ export class Map {
     },
   ): void {
     if (this.map.getLayer(layerId)) {
+      this.map.setFilter(layerId, options.filter ?? null);
       return;
     }
 
@@ -941,6 +938,7 @@ export class Map {
     },
   ): void {
     if (this.map.getLayer(layerId)) {
+      this.map.setFilter(layerId, options.filter ?? null);
       return;
     }
 
@@ -1048,24 +1046,7 @@ export class Map {
     const source = this.map.getSource(sourceId) as maplibregl.GeoJSONSource;
     source.setData({
       type: "FeatureCollection",
-      features: features.flatMap((feature) =>
-        featuresForHighlight(feature).map((highlightFeature) => {
-          if (highlightFeature.properties.type !== FeatureType.Route) {
-            return highlightFeature;
-          }
-          const { osmColour } = highlightFeature.properties;
-          if (!osmColour) {
-            return highlightFeature;
-          }
-          return {
-            ...highlightFeature,
-            properties: {
-              ...highlightFeature.properties,
-              color: osmColour,
-            },
-          };
-        }),
-      ),
+      features: normalizeHighlightFeatures(features),
     });
   }
 

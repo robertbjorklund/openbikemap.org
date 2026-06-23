@@ -67,6 +67,7 @@ export function mapFeatureFromMvt(
       network: asString(feature.properties.network),
       osmRouteType: parseOsmRouteType(feature.properties.osmRouteType),
       osmColour: asString(feature.properties.osmColour),
+      color: asString(feature.properties.color),
       distance: null,
       roundtrip: null,
       pavedRatio: asNumber(feature.properties.pavedRatio),
