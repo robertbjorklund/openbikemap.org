@@ -2,11 +2,6 @@ import type { LineString, MultiLineString, Position } from "geojson";
 import type * as maplibregl from "maplibre-gl";
 import { mapFeatureFromMvt } from "../components/MvtFeature";
 import { FeatureType, type MapFeature } from "../types/FeatureTypes";
-import {
-  getFeatureGroupKey,
-  getRouteLinkKeys,
-  matchesGroupKey,
-} from "../types/FeatureGroupKeys";
 import { mergeElevationProfilesFromFeatures } from "./geometryElevationPath";
 
 export type { FeatureGroupKey, RouteGroupKey, TrailGroupKey } from "../types/FeatureGroupKeys";
@@ -72,52 +67,54 @@ function mergeFeatureGeometries(
   };
 }
 
+const ROUTE_TILE_CLIP_LAYERS = [
+  "tappable-route",
+  "routes",
+  "routes-casing",
+] as const;
+
+const TRAIL_TILE_CLIP_LAYERS = [
+  "tappable-trail",
+  "trails",
+  "trails-casing",
+  "trails-imba",
+] as const;
+
+/**
+ * Tile clips for the clicked segment only (same feature id on screen).
+ * Full logical groups resolve via the API — do not scan all loaded MVT routes.
+ */
 export function findRelatedFeatures(
   map: maplibregl.Map,
   primary: MapFeature,
 ): MapFeature[] {
-  const groupKey = getFeatureGroupKey(primary);
   const sourceLayer =
     primary.properties.type === FeatureType.Route ? "routes" : "trails";
+  const layerIds =
+    primary.properties.type === FeatureType.Route
+      ? ROUTE_TILE_CLIP_LAYERS
+      : TRAIL_TILE_CLIP_LAYERS;
 
   if (!map.getSource("openbikemap")) {
     return [primary];
   }
 
-  const rawFeatures = map.querySourceFeatures("openbikemap", {
-    sourceLayer,
-  });
+  const layers = layerIds.filter((layerId) => map.getLayer(layerId));
+  if (layers.length === 0) {
+    return [primary];
+  }
 
   const primaryId = primary.properties.id;
   const matches: MapFeature[] = [];
-  for (const raw of rawFeatures) {
+  for (const raw of map.queryRenderedFeatures({ layers })) {
+    if (raw.source !== "openbikemap" || raw.sourceLayer !== sourceLayer) {
+      continue;
+    }
     const feature = mapFeatureFromMvt(
       raw as maplibregl.MapGeoJSONFeature,
       sourceLayer,
     );
-    if (!feature) {
-      continue;
-    }
-    if (feature.properties.id === primaryId) {
-      matches.push(feature);
-      continue;
-    }
-    if (groupKey?.routeLinkKeys?.length) {
-      if (
-        feature.properties.type === FeatureType.Route &&
-        getRouteLinkKeys(feature.properties).some((linkKey) =>
-          groupKey.routeLinkKeys!.includes(linkKey),
-        )
-      ) {
-        matches.push(feature);
-      }
-      continue;
-    }
-    if (groupKey?.groupId && feature.properties.groupId === groupKey.groupId) {
-      matches.push(feature);
-      continue;
-    }
-    if (groupKey && matchesGroupKey(feature, groupKey)) {
+    if (feature?.properties.id === primaryId) {
       matches.push(feature);
     }
   }
@@ -156,7 +153,9 @@ export function featuresForHighlight(feature: MapFeature): MapFeature[] {
 export function mergeSegmentGroup(
   primary: MapFeature,
   segments: MapFeature[],
+  options?: { mergeElevation?: boolean },
 ): MapFeature {
+  const mergeElevation = options?.mergeElevation !== false;
   const uniqueSegments = [
     ...new Map(segments.map((s) => [s.properties.id, s])).values(),
   ];
@@ -193,7 +192,9 @@ export function mergeSegmentGroup(
         ...primary.properties,
         lengthMeters:
           totalLength > 0 ? totalLength : primary.properties.lengthMeters,
-        elevationProfile: mergeElevationProfilesFromFeatures(uniqueSegments),
+        elevationProfile: mergeElevation
+          ? mergeElevationProfilesFromFeatures(uniqueSegments)
+          : null,
       },
     };
   }
@@ -203,7 +204,9 @@ export function mergeSegmentGroup(
     geometry,
     properties: {
       ...primary.properties,
-      elevationProfile: mergeElevationProfilesFromFeatures(uniqueSegments),
+      elevationProfile: mergeElevation
+        ? mergeElevationProfilesFromFeatures(uniqueSegments)
+        : null,
     },
   };
 }

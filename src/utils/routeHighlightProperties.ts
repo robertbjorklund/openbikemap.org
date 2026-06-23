@@ -48,12 +48,15 @@ export function normalizeRouteHighlightFeature(
   } as RouteFeature;
 }
 
+/** Max line parts in highlight GeoJSON before skipping per-line split. */
+const HIGHLIGHT_MAX_LINE_PARTS = 150;
+
 export function normalizeHighlightFeatures(
   features: MapFeature[],
 ): MapFeature[] {
-  return features.flatMap((feature) =>
-    featuresForHighlight(feature).map((part) =>
-      normalizeRouteHighlightFeature(part),
-    ),
-  );
+  const parts = features.flatMap((feature) => featuresForHighlight(feature));
+  if (parts.length > HIGHLIGHT_MAX_LINE_PARTS) {
+    return features.map((feature) => normalizeRouteHighlightFeature(feature));
+  }
+  return parts.map((part) => normalizeRouteHighlightFeature(part));
 }

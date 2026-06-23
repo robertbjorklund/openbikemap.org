@@ -35,7 +35,9 @@ export function buildRouteGroupSelection(
   return {
     groupId: groupId ?? primary.properties.id,
     stageFeatures,
-    wholeRouteFeature: mergeSegmentGroup(primary, stageFeatures) as RouteFeature,
+    wholeRouteFeature: mergeSegmentGroup(primary, stageFeatures, {
+      mergeElevation: false,
+    }) as RouteFeature,
     activeStageId: null,
   };
 }

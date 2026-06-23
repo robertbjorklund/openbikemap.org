@@ -9,6 +9,9 @@ import { fetchWeatherForecast } from "../utils/weather/openMeteoClient";
 import type { DailyWeather } from "../utils/weather/weatherTypes";
 import EventBus from "./EventBus";
 
+/** Avoid dozens of parallel forecast requests on long multi-stage routes. */
+const MAX_STAGE_WEATHER_ROWS = 10;
+
 function stageTitle(feature: RouteFeature): string {
   return (
     formatRouteStageLabel(feature.properties) ??
@@ -102,12 +105,15 @@ export const RouteStageWeatherList: React.FunctionComponent<{
     return null;
   }
 
+  const weatherStages = stages.slice(0, MAX_STAGE_WEATHER_ROWS);
+  const hiddenWeatherCount = stages.length - weatherStages.length;
+
   return (
     <Box sx={{ mb: compact ? 1 : 1.5 }}>
       <Typography variant="body2" color="text.secondary" gutterBottom>
         Weather by stage (today at start)
       </Typography>
-      {stages.map((stage) => (
+      {weatherStages.map((stage) => (
         <StageWeatherRow
           key={stage.properties.stageId ?? stage.properties.id}
           feature={stage}
@@ -119,6 +125,12 @@ export const RouteStageWeatherList: React.FunctionComponent<{
           }}
         />
       ))}
+      {hiddenWeatherCount > 0 && (
+        <Typography variant="body2" color="text.secondary" sx={{ pt: 0.5 }}>
+          Weather shown for the first {MAX_STAGE_WEATHER_ROWS} stages. Select a
+          stage for its forecast.
+        </Typography>
+      )}
     </Box>
   );
 };

@@ -39,7 +39,15 @@ function buildDisplayFeature(
   if (relatedFeatures.length <= 1) {
     return primary;
   }
-  return mergeSegmentGroup(primary, relatedFeatures);
+
+  const sameIdSegments = relatedFeatures.filter(
+    (feature) => feature.properties.id === primary.properties.id,
+  );
+  if (sameIdSegments.length <= 1) {
+    return primary;
+  }
+
+  return mergeSegmentGroup(primary, sameIdSegments);
 }
 
 export default class StateReducer implements EventBus {
@@ -373,12 +381,17 @@ export default class StateReducer implements EventBus {
         apiFeature,
         relatedFeatures,
       );
-      const fullRelated = await this.loadFullRelatedFeatures(
-        id,
-        idType,
-        expandedRelated,
-        apiFeature,
-      );
+      const fullRelated =
+        expandedRelated.length > 1 &&
+        apiFeature.properties.groupId &&
+        expandedRelated.every((feature) => feature.geometry)
+          ? expandedRelated
+          : await this.loadFullRelatedFeatures(
+              id,
+              idType,
+              expandedRelated,
+              apiFeature,
+            );
 
       this.update({
         selectedObject: {
