@@ -27,6 +27,7 @@ import {
 import { getDefaultFeatureTitle, getMapFeatureKind } from "../utils/MapFeatureKind";
 import { getSegmentCount } from "../utils/FeatureGroup";
 import { formatLength, getFeatureLengthMeters } from "../utils/Length";
+import { FeatureDetailStat } from "./FeatureDetailStat";
 import { CardHeader } from "./CardHeader";
 import { ElevationStats } from "./ElevationStats";
 import EventBus from "./EventBus";
@@ -195,32 +196,18 @@ function TrailInfoBody({
 
       {!compactMobile && <Divider sx={{ my: 1.5 }} />}
 
-      {length && (
-        <Typography variant="body2" gutterBottom sx={{ mb: compactMobile ? 0.25 : undefined }}>
-          Length: {length}
-        </Typography>
-      )}
+      {length && <FeatureDetailStat>Length: {length}</FeatureDetailStat>}
 
       {!compactMobile && properties.surface && (
-
-        <Typography variant="body2">Surface: {properties.surface}</Typography>
-
+        <FeatureDetailStat>Surface: {properties.surface}</FeatureDetailStat>
       )}
 
       {!compactMobile && properties.lit !== null && (
-
-        <Typography variant="body2">
-
-          Lit: {properties.lit ? "Yes" : "No"}
-
-        </Typography>
-
+        <FeatureDetailStat>Lit: {properties.lit ? "Yes" : "No"}</FeatureDetailStat>
       )}
 
       {!compactMobile && properties.network && (
-
-        <Typography variant="body2">Network: {properties.network}</Typography>
-
+        <FeatureDetailStat>Network: {properties.network}</FeatureDetailStat>
       )}
 
       {!compactMobile && (
@@ -249,19 +236,11 @@ function TrailInfoBody({
       {compactMobile && <ElevationStats feature={feature} map={map} />}
 
       {compactMobile && properties.surface && (
-
-        <Typography variant="body2">Surface: {properties.surface}</Typography>
-
+        <FeatureDetailStat>Surface: {properties.surface}</FeatureDetailStat>
       )}
 
       {compactMobile && properties.lit !== null && (
-
-        <Typography variant="body2">
-
-          Lit: {properties.lit ? "Yes" : "No"}
-
-        </Typography>
-
+        <FeatureDetailStat>Lit: {properties.lit ? "Yes" : "No"}</FeatureDetailStat>
       )}
 
       {segmentCount > 1 && (

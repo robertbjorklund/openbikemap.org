@@ -15,6 +15,7 @@ import { formatLength, getFeatureLengthMeters } from "../utils/Length";
 
 import { formatRouteStageLabel } from "../utils/RouteStage";
 import { getMapFeatureKind } from "../utils/MapFeatureKind";
+import { FeatureDetailStat } from "./FeatureDetailStat";
 import { CardHeader } from "./CardHeader";
 
 import { ElevationStats } from "./ElevationStats";
@@ -173,36 +174,22 @@ function RouteInfoBody({
 
       {!compactMobile && <Divider sx={{ my: 1.5 }} />}
 
-      {length && (
-        <Typography variant="body2" gutterBottom sx={{ mb: compactMobile ? 0.25 : undefined }}>
-          Length: {length}
-        </Typography>
-      )}
+      {length && <FeatureDetailStat>Length: {length}</FeatureDetailStat>}
 
       {properties.pavedRatio !== null && (
-
-        <Typography variant="body2" gutterBottom sx={{ mb: compactMobile ? 0.5 : undefined }}>
-
+        <FeatureDetailStat>
           Surface: {Math.round(properties.pavedRatio * 100)}% paved
-
-        </Typography>
-
+        </FeatureDetailStat>
       )}
 
       {!compactMobile && properties.distance && (
-
-        <Typography variant="body2">Distance: {properties.distance}</Typography>
-
+        <FeatureDetailStat>Distance: {properties.distance}</FeatureDetailStat>
       )}
 
       {!compactMobile && properties.roundtrip !== null && (
-
-        <Typography variant="body2">
-
+        <FeatureDetailStat>
           Roundtrip: {properties.roundtrip ? "Yes" : "No"}
-
-        </Typography>
-
+        </FeatureDetailStat>
       )}
 
       {!compactMobile && <ElevationStats feature={feature} map={map} />}
@@ -237,19 +224,13 @@ function RouteInfoBody({
       )}
 
       {compactMobile && properties.distance && (
-
-        <Typography variant="body2">Distance: {properties.distance}</Typography>
-
+        <FeatureDetailStat>Distance: {properties.distance}</FeatureDetailStat>
       )}
 
       {compactMobile && properties.roundtrip !== null && (
-
-        <Typography variant="body2">
-
+        <FeatureDetailStat>
           Roundtrip: {properties.roundtrip ? "Yes" : "No"}
-
-        </Typography>
-
+        </FeatureDetailStat>
       )}
 
       {segmentCount > 1 && (

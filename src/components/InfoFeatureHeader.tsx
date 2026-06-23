@@ -39,7 +39,7 @@ export const InfoFeatureHeader: React.FunctionComponent<{
           }}
         >
           {props.subtitleIcon}
-          <Typography color="inherit" sx={{ mb: 0 }}>
+          <Typography variant="body2" color="inherit" sx={{ mb: 0 }}>
             {props.subtitle}
           </Typography>
         </Box>

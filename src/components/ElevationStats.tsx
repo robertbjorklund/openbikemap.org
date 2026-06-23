@@ -1,4 +1,3 @@
-import { Typography } from "@mui/material";
 import type * as maplibregl from "maplibre-gl";
 import * as React from "react";
 import type { MapFeature } from "../types/FeatureTypes";
@@ -7,6 +6,7 @@ import {
   getFeatureElevationData,
   getFeatureElevationDisplayLine,
 } from "../utils/getFeatureElevationData";
+import { FeatureDetailStat } from "./FeatureDetailStat";
 import { HeightProfile } from "./HeightProfile";
 import { useMobilePanelLayout } from "./useMobilePanelLayout";
 import { useUnitSystem } from "./UnitSystemManager";
@@ -36,7 +36,7 @@ export const ElevationStats: React.FunctionComponent<{
 
   return (
     <>
-      <Typography className="distance-and-elevation-info">
+      <FeatureDetailStat className="feature-detail-stat-inline">
         {elevationData.inclinedLengthInMeters > 0 && (
           <span>
             Distance:{" "}
@@ -58,10 +58,10 @@ export const ElevationStats: React.FunctionComponent<{
             {UnitHelpers.heightText(elevationData.descentInMeters, unitSystem)}
           </span>
         )}
-      </Typography>
+      </FeatureDetailStat>
       {(elevationData.averagePitchInPercent !== null ||
         elevationData.maxPitchInPercent !== null) && (
-        <Typography className="distance-and-elevation-info">
+        <FeatureDetailStat className="feature-detail-stat-inline">
           {elevationData.averagePitchInPercent !== null && (
             <span>
               Average slope:{" "}
@@ -73,7 +73,7 @@ export const ElevationStats: React.FunctionComponent<{
               Max slope: {formattedSlope(elevationData.maxPitchInPercent)}
             </span>
           )}
-        </Typography>
+        </FeatureDetailStat>
       )}
       <HeightProfile
         displayGeometry={displayLine}

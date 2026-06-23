@@ -141,13 +141,9 @@ body {
   pointer-events: none;
 }
 
-.distance-and-elevation-info {
-  margin-top: 4px;
-}
-
-.distance-and-elevation-info > *:after {
-  margin-right: 4px;
-  content: " ";
+.feature-detail-stat-inline > span:not(:last-child)::after {
+  margin-right: 0.35em;
+  content: "·";
 }
 
 .logo-control-text {
