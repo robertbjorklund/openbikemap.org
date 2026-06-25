@@ -28,6 +28,16 @@ export const IMBA_TRAIL_COLORS: Record<0 | 1 | 2 | 3 | 4, string> = {
   4: IMBA_TRAIL_COLOR_ORANGE,
 };
 
+export function imbaTrailColor(mtbScaleImba: number | null): string {
+  if (mtbScaleImba === null) {
+    return IMBA_TRAIL_COLOR_WHITE;
+  }
+  if (mtbScaleImba in IMBA_TRAIL_COLORS) {
+    return IMBA_TRAIL_COLORS[mtbScaleImba as 0 | 1 | 2 | 3 | 4];
+  }
+  return IMBA_TRAIL_COLOR_WHITE;
+}
+
 export function mtbTrailColor(mtbScale: number | null): string {
   if (mtbScale === null) {
     return TRAIL_COLOR_OTHER;

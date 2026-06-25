@@ -102,6 +102,7 @@ export function mapFeatureFromMvt(
       tracktype: null,
       mtbScale: asNumber(feature.properties.mtbScale),
       mtbScaleImba: asNumber(feature.properties.mtbScaleImba),
+      color: asString(feature.properties.color),
       sacScale: null,
       bicycle: null,
       lit: asBoolean(feature.properties.lit),

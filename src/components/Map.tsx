@@ -8,7 +8,10 @@ import { FeatureType, type MapFeature } from "../types/FeatureTypes";
 import { findRelatedFeatures } from "../utils/FeatureGroup";
 import {
   normalizeHighlightFeatures,
+  HIGHLIGHT_LABEL_OVERLAY_FILTER,
+  IMBA_TRAIL_HIGHLIGHT_OVERLAY_FILTER,
   ROUTE_HIGHLIGHT_OVERLAY_FILTER,
+  STS_TRAIL_HIGHLIGHT_OVERLAY_FILTER,
 } from "../utils/routeHighlightProperties";
 import { findRouteStageFeature } from "../utils/routeGroupSelection";
 import {
@@ -57,6 +60,10 @@ import { SidePanelControl } from "./SidePanelControl";
 import State from "./State";
 import { OPENBIKEMAP_LINE_MIN_ZOOM } from "../constants/OpenBikeMapLayerZoom";
 import {
+  TRAIL_IMBA_LINE_WIDTH_EXPRESSION,
+  TRAIL_STS_CENTER_LINE_COLOR,
+} from "../types/MtbTrailColors";
+import {
   isCameraPositionConsentPending,
   setCameraPositionConsent,
 } from "../utils/cameraPositionConsent";
@@ -75,6 +82,20 @@ const ROUTE_LAYER_STACK = [
   "routes-label-stripe",
   "routes-label",
   "tappable-route",
+] as const;
+
+const TRAIL_LAYER_STACK = [
+  "trails-casing",
+  "trails",
+  "trails-imba",
+  "trails-label-stripe",
+  "trails-label",
+  "tappable-trail",
+] as const;
+
+const FEATURE_HIGHLIGHT_LAYER_STACK = [
+  ...ROUTE_LAYER_STACK,
+  ...TRAIL_LAYER_STACK,
 ] as const;
 
 const ROUTE_HIGHLIGHT_GLOW_LAYER_IDS = [
@@ -117,7 +138,25 @@ function highlightLabelLayerId(glowLayerId: string): string {
   return glowLayerId.replace("-line-glow", "-label");
 }
 
-const ROUTE_HIGHLIGHT_LABEL_TEXT: maplibregl.ExpressionSpecification = [
+function highlightStsOuterLayerId(glowLayerId: string): string {
+  return glowLayerId.replace("-line-glow", "-sts-outer");
+}
+
+function highlightStsCenterLayerId(glowLayerId: string): string {
+  return glowLayerId.replace("-line-glow", "-sts-center");
+}
+
+function highlightImbaLineLayerId(glowLayerId: string): string {
+  return glowLayerId.replace("-line-glow", "-imba-line");
+}
+
+const HIGHLIGHT_LINE_COLOR: maplibregl.ExpressionSpecification = [
+  "coalesce",
+  ["get", "color"],
+  "#7b1fa2",
+];
+
+const HIGHLIGHT_LABEL_TEXT: maplibregl.ExpressionSpecification = [
   "coalesce",
   ["get", "name"],
   ["get", "ref"],
@@ -151,11 +190,40 @@ const ROUTE_HIGHLIGHT_CASING_LINE_WIDTH: maplibregl.ExpressionSpecification = [
   9,
 ];
 
-const ROUTE_HIGHLIGHT_LINE_COLOR: maplibregl.ExpressionSpecification = [
-  "coalesce",
-  ["get", "color"],
-  "#7b1fa2",
+const TRAIL_HIGHLIGHT_STS_CASING_WIDTH: maplibregl.ExpressionSpecification = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  OPENBIKEMAP_LINE_MIN_ZOOM,
+  2,
+  10,
+  3,
+  14,
+  6.5,
+  16,
+  7,
 ];
+
+const TRAIL_HIGHLIGHT_STS_CENTER_WIDTH: maplibregl.ExpressionSpecification = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  OPENBIKEMAP_LINE_MIN_ZOOM,
+  0.8,
+  10,
+  1.2,
+  14,
+  2.5,
+  16,
+  3,
+];
+
+const TRAIL_HIGHLIGHT_IMBA_LINE_WIDTH: maplibregl.ExpressionSpecification =
+  JSON.parse(
+    JSON.stringify(TRAIL_IMBA_LINE_WIDTH_EXPRESSION),
+  ) as maplibregl.ExpressionSpecification;
+
+const TRAIL_HIGHLIGHT_IMBA_DASHARRAY: [number, number] = [1, 1.5];
 
 const ROUTE_HIGHLIGHT_GLOW_WIDTH: maplibregl.ExpressionSpecification = [
   "interpolate",
@@ -761,29 +829,33 @@ export class Map {
     this.repositionSelectedHighlightLayers();
   }
 
-  /** Layer id to insert highlight layers before (= draw on top of all route MVT layers). */
-  private getRouteHighlightInsertBeforeLayerId(): string | undefined {
+  /** Layer id to insert highlight layers before (= draw on top of route/trail MVT). */
+  private getFeatureHighlightInsertBeforeLayerId(): string | undefined {
     const style = this.map.getStyle();
     if (!style?.layers) {
       return undefined;
     }
 
-    let lastRouteLayerIndex = -1;
+    let lastFeatureLayerIndex = -1;
     for (let i = 0; i < style.layers.length; i++) {
-      if ((ROUTE_LAYER_STACK as readonly string[]).includes(style.layers[i].id)) {
-        lastRouteLayerIndex = i;
+      if (
+        (FEATURE_HIGHLIGHT_LAYER_STACK as readonly string[]).includes(
+          style.layers[i].id,
+        )
+      ) {
+        lastFeatureLayerIndex = i;
       }
     }
 
-    if (lastRouteLayerIndex === -1) {
+    if (lastFeatureLayerIndex === -1) {
       return undefined;
     }
 
-    return style.layers[lastRouteLayerIndex + 1]?.id;
+    return style.layers[lastFeatureLayerIndex + 1]?.id;
   }
 
   private repositionSelectedHighlightLayers(): void {
-    const insertBeforeId = this.getRouteHighlightInsertBeforeLayerId();
+    const insertBeforeId = this.getFeatureHighlightInsertBeforeLayerId();
     if (!insertBeforeId) {
       return;
     }
@@ -794,6 +866,9 @@ export class Map {
         glowLayerId,
         highlightCasingLayerId(glowLayerId),
         highlightCoreLayerId(glowLayerId),
+        highlightStsOuterLayerId(glowLayerId),
+        highlightStsCenterLayerId(glowLayerId),
+        highlightImbaLineLayerId(glowLayerId),
         highlightLabelStripeLayerId(glowLayerId),
         highlightLabelLayerId(glowLayerId),
       ];
@@ -819,10 +894,10 @@ export class Map {
     }
 
     this.ensureHighlightGlowLayer(glowLayerId, sourceId, glow);
-    this.ensureHighlightRouteOverlayLayers(glowLayerId, sourceId);
+    this.ensureHighlightFeatureOverlayLayers(glowLayerId, sourceId);
   }
 
-  private ensureHighlightRouteOverlayLayers(
+  private ensureHighlightFeatureOverlayLayers(
     glowLayerId: string,
     sourceId: string,
   ): void {
@@ -850,11 +925,52 @@ export class Map {
       sourceId,
       {
         paint: {
-          "line-color": ROUTE_HIGHLIGHT_LINE_COLOR,
+          "line-color": HIGHLIGHT_LINE_COLOR,
           "line-width": ROUTE_HIGHLIGHT_CORE_LINE_WIDTH,
         },
         layout: lineLayout,
         filter: ROUTE_HIGHLIGHT_OVERLAY_FILTER,
+      },
+    );
+
+    this.ensureHighlightLineLayer(
+      highlightStsOuterLayerId(glowLayerId),
+      sourceId,
+      {
+        paint: {
+          "line-color": HIGHLIGHT_LINE_COLOR,
+          "line-width": TRAIL_HIGHLIGHT_STS_CASING_WIDTH,
+          "line-opacity": 0.95,
+        },
+        layout: lineLayout,
+        filter: STS_TRAIL_HIGHLIGHT_OVERLAY_FILTER,
+      },
+    );
+
+    this.ensureHighlightLineLayer(
+      highlightStsCenterLayerId(glowLayerId),
+      sourceId,
+      {
+        paint: {
+          "line-color": TRAIL_STS_CENTER_LINE_COLOR,
+          "line-width": TRAIL_HIGHLIGHT_STS_CENTER_WIDTH,
+        },
+        layout: lineLayout,
+        filter: STS_TRAIL_HIGHLIGHT_OVERLAY_FILTER,
+      },
+    );
+
+    this.ensureHighlightLineLayer(
+      highlightImbaLineLayerId(glowLayerId),
+      sourceId,
+      {
+        paint: {
+          "line-color": HIGHLIGHT_LINE_COLOR,
+          "line-width": TRAIL_HIGHLIGHT_IMBA_LINE_WIDTH,
+          "line-dasharray": TRAIL_HIGHLIGHT_IMBA_DASHARRAY,
+        },
+        layout: lineLayout,
+        filter: IMBA_TRAIL_HIGHLIGHT_OVERLAY_FILTER,
       },
     );
 
@@ -865,16 +981,16 @@ export class Map {
         minzoom: 11,
         layout: {
           "symbol-placement": "line",
-          "text-field": ROUTE_HIGHLIGHT_LABEL_TEXT,
+          "text-field": HIGHLIGHT_LABEL_TEXT,
           "text-font": ["Noto Sans Bold"],
           "text-size": 12,
         },
         paint: {
-          "text-color": ROUTE_HIGHLIGHT_LINE_COLOR,
-          "text-halo-color": ROUTE_HIGHLIGHT_LINE_COLOR,
+          "text-color": HIGHLIGHT_LINE_COLOR,
+          "text-halo-color": HIGHLIGHT_LINE_COLOR,
           "text-halo-width": 5,
         },
-        filter: ROUTE_HIGHLIGHT_OVERLAY_FILTER,
+        filter: HIGHLIGHT_LABEL_OVERLAY_FILTER,
       },
     );
 
@@ -885,7 +1001,7 @@ export class Map {
         minzoom: 11,
         layout: {
           "symbol-placement": "line",
-          "text-field": ROUTE_HIGHLIGHT_LABEL_TEXT,
+          "text-field": HIGHLIGHT_LABEL_TEXT,
           "text-font": ["Noto Sans Regular"],
           "text-size": 12,
         },
@@ -894,7 +1010,7 @@ export class Map {
           "text-halo-color": "#ffffff",
           "text-halo-width": 1.75,
         },
-        filter: ROUTE_HIGHLIGHT_OVERLAY_FILTER,
+        filter: HIGHLIGHT_LABEL_OVERLAY_FILTER,
       },
     );
   }
@@ -913,7 +1029,7 @@ export class Map {
       return;
     }
 
-    const insertBeforeId = this.getRouteHighlightInsertBeforeLayerId();
+    const insertBeforeId = this.getFeatureHighlightInsertBeforeLayerId();
     this.map.addLayer(
       {
         id: layerId,
@@ -942,7 +1058,7 @@ export class Map {
       return;
     }
 
-    const insertBeforeId = this.getRouteHighlightInsertBeforeLayerId();
+    const insertBeforeId = this.getFeatureHighlightInsertBeforeLayerId();
     this.map.addLayer(
       {
         id: layerId,
@@ -976,7 +1092,7 @@ export class Map {
       return;
     }
 
-    const insertBeforeId = this.getRouteHighlightInsertBeforeLayerId();
+    const insertBeforeId = this.getFeatureHighlightInsertBeforeLayerId();
     this.map.addLayer(
       {
         id: layerId,
@@ -1011,7 +1127,7 @@ export class Map {
       return;
     }
 
-    const insertBeforeId = this.getRouteHighlightInsertBeforeLayerId();
+    const insertBeforeId = this.getFeatureHighlightInsertBeforeLayerId();
     this.map.addLayer(
       {
         id: layerId,

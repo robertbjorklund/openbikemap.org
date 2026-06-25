@@ -62,6 +62,10 @@ export interface TrailProperties {
   elevationProfile: ElevationProfile | null;
   status: Status;
   sources: Source[];
+  /** Precomputed map line color when present (MVT tiles / highlight). */
+  color?: string | null;
+  /** Highlight overlay: dashed IMBA style vs STS double-line. */
+  isImbaTrail?: boolean;
 }
 
 export interface RouteProperties {
