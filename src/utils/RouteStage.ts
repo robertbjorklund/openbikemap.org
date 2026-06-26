@@ -1,7 +1,4 @@
-import type { RouteFeature, RouteProperties } from "../types/FeatureTypes";
-import { formatRouteDisplayTitle } from "../types/RouteNetwork";
-import type { UnitSystem } from "../components/utils/UnitHelpers";
-import { formatLength, getFeatureLengthMeters } from "./Length";
+import type { RouteProperties } from "../types/FeatureTypes";
 
 /** Human-readable label for a route stage from OSM from/to/via tags. */
 export function formatRouteStageLabel(properties: RouteProperties): string | null {
@@ -26,33 +23,4 @@ export function formatRouteStageLabel(properties: RouteProperties): string | nul
     return `${properties.from.trim()}${via} → ${properties.to.trim()}`;
   }
   return parts.join(" · ");
-}
-
-/** Tooltip text for a hovered route stage (1–2 lines: segment label and/or length). */
-export function formatRouteStageTooltip(
-  feature: RouteFeature,
-  unitSystem: UnitSystem,
-): string {
-  const { properties } = feature;
-  const lines: string[] = [];
-
-  const stageLabel = formatRouteStageLabel(properties);
-  const routeTitle = formatRouteDisplayTitle(properties.name, properties.ref);
-
-  if (stageLabel) {
-    lines.push(stageLabel);
-  } else if (routeTitle) {
-    lines.push(routeTitle);
-  }
-
-  const length = formatLength(getFeatureLengthMeters(feature), unitSystem);
-  if (length) {
-    lines.push(length);
-  }
-
-  if (lines.length === 0) {
-    return routeTitle || "Route segment";
-  }
-
-  return lines.join("\n");
 }

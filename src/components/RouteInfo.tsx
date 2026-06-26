@@ -42,6 +42,8 @@ import { SourceSummary } from "./SourceSummary";
 
 import { FeatureWeather } from "./FeatureWeather";
 
+import { RouteStageList } from "./RouteStageList";
+
 import type { RouteGroupSelection } from "./SelectedObject";
 
 import { useUnitSystem } from "./UnitSystemManager";
@@ -163,11 +165,8 @@ function RouteInfoBody({
           />
         ))}
 
-      {routeGroup && !routeGroup.activeStageId && (
-        <Typography variant="body2" color="text.secondary" gutterBottom>
-          {routeGroup.stageFeatures.length} etapper · hover to preview, click to
-          select one
-        </Typography>
+      {routeGroup && !routeGroup.activeStageId && eventBus && (
+        <RouteStageList routeGroup={routeGroup} eventBus={eventBus} />
       )}
 
       {routeGroup?.activeStageId && (
@@ -178,7 +177,7 @@ function RouteInfoBody({
             onClick={() => eventBus?.showRouteGroupOverview()}
             sx={{ cursor: "pointer" }}
           >
-            ← View whole route
+            ← Route overview
           </Link>
         </Typography>
       )}

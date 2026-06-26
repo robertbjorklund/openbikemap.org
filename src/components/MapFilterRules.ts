@@ -771,11 +771,37 @@ function hideBasemapPathLayers(map: maplibregl.Map): void {
 
 const FILTER_SET_OPTIONS = { validate: false } as const;
 
+function combineLayerFilters(
+  base: maplibregl.ExpressionFilterSpecification | null,
+  extra: maplibregl.ExpressionFilterSpecification | null,
+): maplibregl.ExpressionFilterSpecification | null {
+  if (!extra) {
+    return base;
+  }
+  if (!base) {
+    return extra;
+  }
+  return ["all", base, extra];
+}
+
+function excludeFeatureIdsFilter(
+  ids: readonly string[],
+): maplibregl.ExpressionFilterSpecification | null {
+  if (ids.length === 0) {
+    return null;
+  }
+  return [
+    "!",
+    ["in", ["to-string", ["get", "id"]], ["literal", [...ids]]],
+  ];
+}
+
 function applyTrailLayerToMap(
   map: maplibregl.Map,
   layerId: string,
   mtbVisible: boolean,
   filters: MapFilters,
+  excludedFeatureIds: readonly string[] = [],
 ): void {
   if (!map.getLayer(layerId)) {
     if (import.meta.env.DEV) {
@@ -789,7 +815,9 @@ function applyTrailLayerToMap(
   map.setLayoutProperty(layerId, "visibility", hideGroup ? "none" : "visible");
   map.setFilter(
     layerId,
-    hideGroup || filterRule === null ? null : filterRule,
+    hideGroup
+      ? null
+      : combineLayerFilters(filterRule, excludeFeatureIdsFilter(excludedFeatureIds)),
     FILTER_SET_OPTIONS,
   );
 }
@@ -799,6 +827,7 @@ function applyRouteLayerToMap(
   layerId: string,
   routesVisible: boolean,
   routesFilter: ObjectFilterRules,
+  excludedFeatureIds: readonly string[] = [],
 ): void {
   if (!map.getLayer(layerId)) {
     if (import.meta.env.DEV) {
@@ -811,7 +840,9 @@ function applyRouteLayerToMap(
   map.setLayoutProperty(layerId, "visibility", hideGroup ? "none" : "visible");
   map.setFilter(
     layerId,
-    hideGroup || routesFilter === null ? null : routesFilter,
+    hideGroup
+      ? null
+      : combineLayerFilters(routesFilter, excludeFeatureIdsFilter(excludedFeatureIds)),
     FILTER_SET_OPTIONS,
   );
 }
@@ -820,6 +851,7 @@ function applyRouteLayerToMap(
 export function applyFilterRulesToMap(
   map: maplibregl.Map,
   filters: MapFilters,
+  excludedFeatureIds: readonly string[] = [],
 ): void {
   const style = map.getStyle();
   if (!style?.layers?.length) {
@@ -834,14 +866,26 @@ export function applyFilterRulesToMap(
     if (!map.getLayer(layerId)) {
       continue;
     }
-    applyTrailLayerToMap(map, layerId, mtbVisible, filters);
+    applyTrailLayerToMap(
+      map,
+      layerId,
+      mtbVisible,
+      filters,
+      excludedFeatureIds,
+    );
   }
 
   for (const layerId of ROUTE_LAYER_IDS) {
     if (!map.getLayer(layerId)) {
       continue;
     }
-    applyRouteLayerToMap(map, layerId, routesVisible, routesFilter);
+    applyRouteLayerToMap(
+      map,
+      layerId,
+      routesVisible,
+      routesFilter,
+      excludedFeatureIds,
+    );
   }
 
   // Any openbikemap trail/route layers added in newer styles.
@@ -856,9 +900,21 @@ export function applyFilterRulesToMap(
       continue;
     }
     if (layer["source-layer"] === "trails") {
-      applyTrailLayerToMap(map, layer.id, mtbVisible, filters);
+      applyTrailLayerToMap(
+        map,
+        layer.id,
+        mtbVisible,
+        filters,
+        excludedFeatureIds,
+      );
     } else if (layer["source-layer"] === "routes") {
-      applyRouteLayerToMap(map, layer.id, routesVisible, routesFilter);
+      applyRouteLayerToMap(
+        map,
+        layer.id,
+        routesVisible,
+        routesFilter,
+        excludedFeatureIds,
+      );
     }
   }
 

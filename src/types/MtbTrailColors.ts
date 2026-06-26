@@ -38,6 +38,36 @@ export function imbaTrailColor(mtbScaleImba: number | null): string {
   return IMBA_TRAIL_COLOR_WHITE;
 }
 
+/** True when mtb:scale:imba is 0–4 (same rule as map tile styling). */
+export function isImbaRatedTrail(mtbScaleImba: number | null): boolean {
+  return mtbScaleImba !== null && mtbScaleImba in IMBA_TRAIL_COLORS;
+}
+
+export interface TrailLineColorProperties {
+  category?: string | null;
+  mtbScaleImba?: number | null;
+  mtbScale?: number | null;
+  color?: string | null;
+}
+
+/** JS mirror of MTB_TRAIL_LINE_COLOR_EXPRESSION for highlight overlays. */
+export function trailLineColorFromProperties(
+  properties: TrailLineColorProperties,
+): string {
+  const { category, mtbScaleImba, mtbScale, color } = properties;
+
+  if (isImbaRatedTrail(mtbScaleImba ?? null)) {
+    return imbaTrailColor(mtbScaleImba ?? null);
+  }
+  if (category !== "mtb_trail") {
+    return color ?? TRAIL_COLOR_OTHER;
+  }
+  if (mtbScale === null || mtbScale === undefined) {
+    return color ?? TRAIL_COLOR_OTHER;
+  }
+  return mtbTrailColor(mtbScale);
+}
+
 export function mtbTrailColor(mtbScale: number | null): string {
   if (mtbScale === null) {
     return TRAIL_COLOR_OTHER;

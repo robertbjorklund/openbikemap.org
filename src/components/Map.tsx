@@ -5,13 +5,13 @@ import MapFilters, { defaultMapFilters } from "../MapFilters";
 import { MapMarker } from "../MapMarker";
 import { MAP_STYLE_URLS, MapStyle } from "../MapStyle";
 import { FeatureType, type MapFeature } from "../types/FeatureTypes";
+import type { LineString, MultiLineString, Position } from "geojson";
 import { findRelatedFeatures } from "../utils/FeatureGroup";
 import {
   normalizeHighlightFeatures,
+  HIGHLIGHT_GLOW_OVERLAY_FILTER,
   HIGHLIGHT_LABEL_OVERLAY_FILTER,
-  IMBA_TRAIL_HIGHLIGHT_OVERLAY_FILTER,
-  ROUTE_HIGHLIGHT_OVERLAY_FILTER,
-  STS_TRAIL_HIGHLIGHT_OVERLAY_FILTER,
+  HIGHLIGHT_LINE_OVERLAY_FILTER,
 } from "../utils/routeHighlightProperties";
 import { findRouteStageFeature } from "../utils/routeGroupSelection";
 import {
@@ -19,7 +19,6 @@ import {
   fitMapToFeature,
   panMapToCenterFeatureInVisibleArea,
 } from "../utils/mapInfoPanelFocus";
-import { formatRouteStageTooltip } from "../utils/RouteStage";
 import {
   CameraPosition,
   CameraPositionManager,
@@ -59,23 +58,15 @@ import {
 import { SelectedObject, type RouteGroupSelection } from "./SelectedObject";
 import { SidePanelControl } from "./SidePanelControl";
 import State from "./State";
-import { OPENBIKEMAP_LINE_MIN_ZOOM } from "../constants/OpenBikeMapLayerZoom";
-import {
-  TRAIL_IMBA_LINE_WIDTH_EXPRESSION,
-  TRAIL_STS_CENTER_LINE_COLOR,
-} from "../types/MtbTrailColors";
 import {
   isCameraPositionConsentPending,
   setCameraPositionConsent,
 } from "../utils/cameraPositionConsent";
-import { addUnitSystemChangeListener_NonReactive, getUnitSystem } from "./UnitSystemManager";
+import { addUnitSystemChangeListener_NonReactive } from "./UnitSystemManager";
 
 const SELECTED_SOURCE_ID = "openbikemap-selected";
+const SELECTED_HALO_SOURCE_ID = "openbikemap-selected-halo";
 const SELECTED_GLOW_LAYER_ID = "openbikemap-selected-line-glow";
-const SELECTED_GROUP_SOURCE_ID = "openbikemap-selected-group";
-const SELECTED_GROUP_GLOW_LAYER_ID = "openbikemap-selected-group-line-glow";
-const SELECTED_STAGE_SOURCE_ID = "openbikemap-selected-stage";
-const SELECTED_STAGE_GLOW_LAYER_ID = "openbikemap-selected-stage-line-glow";
 
 const ROUTE_LAYER_STACK = [
   "routes-casing",
@@ -99,12 +90,6 @@ const FEATURE_HIGHLIGHT_LAYER_STACK = [
   ...TRAIL_LAYER_STACK,
 ] as const;
 
-const ROUTE_HIGHLIGHT_GLOW_LAYER_IDS = [
-  SELECTED_GROUP_GLOW_LAYER_ID,
-  SELECTED_GLOW_LAYER_ID,
-  SELECTED_STAGE_GLOW_LAYER_ID,
-] as const;
-
 interface RouteHighlightOutline {
   color: string;
   width: maplibregl.ExpressionSpecification;
@@ -113,7 +98,7 @@ interface RouteHighlightOutline {
 
 interface RouteHighlightGlow {
   color: string;
-  opacity: number;
+  opacity: maplibregl.ExpressionSpecification | number;
   width: maplibregl.ExpressionSpecification;
   blur: maplibregl.ExpressionSpecification | number;
   outline?: RouteHighlightOutline;
@@ -161,166 +146,145 @@ const HIGHLIGHT_LABEL_TEXT: maplibregl.ExpressionSpecification = [
   "coalesce",
   ["get", "name"],
   ["get", "ref"],
+  "",
+];
+
+const HIGHLIGHT_LABEL_FILTER: maplibregl.ExpressionFilterSpecification = [
+  "all",
+  HIGHLIGHT_LABEL_OVERLAY_FILTER,
+  [
+    "!=",
+    ["coalesce", ["get", "name"], ["get", "ref"], ""],
+    "",
+  ],
 ];
 
 const ROUTE_HIGHLIGHT_CORE_LINE_WIDTH: maplibregl.ExpressionSpecification = [
   "interpolate",
   ["linear"],
   ["zoom"],
-  OPENBIKEMAP_LINE_MIN_ZOOM,
-  1.2,
-  10,
-  2.2,
-  14,
-  4,
-  16,
-  4.5,
-];
-
-const ROUTE_HIGHLIGHT_CASING_LINE_WIDTH: maplibregl.ExpressionSpecification = [
-  "interpolate",
-  ["linear"],
-  ["zoom"],
-  OPENBIKEMAP_LINE_MIN_ZOOM,
+  5,
   2.5,
-  10,
-  4.5,
-  14,
-  8,
-  16,
-  9,
-];
-
-const TRAIL_HIGHLIGHT_STS_CASING_WIDTH: maplibregl.ExpressionSpecification = [
-  "interpolate",
-  ["linear"],
-  ["zoom"],
-  OPENBIKEMAP_LINE_MIN_ZOOM,
-  2,
-  10,
-  3,
-  14,
-  6.5,
-  16,
   7,
-];
-
-const TRAIL_HIGHLIGHT_STS_CENTER_WIDTH: maplibregl.ExpressionSpecification = [
-  "interpolate",
-  ["linear"],
-  ["zoom"],
-  OPENBIKEMAP_LINE_MIN_ZOOM,
-  0.8,
-  10,
-  1.2,
-  14,
-  2.5,
-  16,
   3,
-];
-
-const TRAIL_HIGHLIGHT_IMBA_LINE_WIDTH: maplibregl.ExpressionSpecification =
-  JSON.parse(
-    JSON.stringify(TRAIL_IMBA_LINE_WIDTH_EXPRESSION),
-  ) as maplibregl.ExpressionSpecification;
-
-const TRAIL_HIGHLIGHT_IMBA_DASHARRAY: [number, number] = [1, 1.5];
-
-const ROUTE_HIGHLIGHT_GLOW_WIDTH: maplibregl.ExpressionSpecification = [
-  "interpolate",
-  ["linear"],
-  ["zoom"],
-  8,
-  8,
   11,
-  12,
+  3.5,
   14,
-  21,
+  5,
   16,
-  24,
-  18,
-  24,
+  5.5,
 ];
 
+/** Routes: yellow overview; trails: always use normalized difficulty color. */
+const HIGHLIGHT_LINE_COLOR_EXPRESSION: maplibregl.ExpressionSpecification = [
+  "step",
+  ["zoom"],
+  [
+    "case",
+    ["==", ["get", "type"], FeatureType.Route],
+    "#ffeb3b",
+    ["coalesce", ["get", "color"], "#7b1fa2"],
+  ],
+  11,
+  ["coalesce", ["get", "color"], "#7b1fa2"],
+];
+
+/** Soft yellow halo at every zoom — wide when zoomed out, subtle when zoomed in. */
 const ROUTE_HIGHLIGHT_YELLOW_GLOW_WIDTH: maplibregl.ExpressionSpecification = [
   "interpolate",
   ["linear"],
   ["zoom"],
+  5,
+  5,
+  7,
+  7,
+  9,
   8,
   11,
+  9,
+  14,
   11,
-  14,
-  14,
-  24,
   16,
-  26,
-  18,
-  26,
-];
-
-const ROUTE_HIGHLIGHT_YELLOW_OUTLINE_WIDTH: maplibregl.ExpressionSpecification = [
-  "interpolate",
-  ["linear"],
-  ["zoom"],
-  8,
-  15,
-  11,
-  18,
-  14,
-  28,
-  16,
-  30,
-  18,
-  30,
-];
-
-/** Dark edge around yellow glow — strongest when zoomed out. */
-const ROUTE_HIGHLIGHT_YELLOW_OUTLINE_OPACITY: maplibregl.ExpressionSpecification = [
-  "interpolate",
-  ["linear"],
-  ["zoom"],
-  8,
-  0.95,
-  10,
-  0.75,
   12,
-  0.35,
-  14,
-  0,
+  18,
+  12,
 ];
 
-const ROUTE_HIGHLIGHT_YELLOW_GLOW_BLUR: maplibregl.ExpressionSpecification = [
+const ROUTE_HIGHLIGHT_YELLOW_GLOW_OPACITY: maplibregl.ExpressionSpecification = [
   "interpolate",
   ["linear"],
   ["zoom"],
-  8,
-  0.2,
+  5,
+  0.8,
+  7,
+  0.86,
+  9,
+  0.75,
   11,
-  1,
+  0.68,
   14,
-  1.5,
+  0.62,
+  16,
+  0.58,
 ];
 
-const ROUTE_HIGHLIGHT_GLOW_BLUR = 1.5;
+const ROUTE_HIGHLIGHT_YELLOW_GLOW_BLUR = 0;
 
 const ROUTE_HIGHLIGHT_YELLOW_GLOW: RouteHighlightGlow = {
   color: "#ffeb3b",
-  opacity: 0.88,
+  opacity: ROUTE_HIGHLIGHT_YELLOW_GLOW_OPACITY,
   width: ROUTE_HIGHLIGHT_YELLOW_GLOW_WIDTH,
   blur: ROUTE_HIGHLIGHT_YELLOW_GLOW_BLUR,
-  outline: {
-    color: "#8d6e00",
-    width: ROUTE_HIGHLIGHT_YELLOW_OUTLINE_WIDTH,
-    opacity: ROUTE_HIGHLIGHT_YELLOW_OUTLINE_OPACITY,
-  },
 };
 
-const ROUTE_HIGHLIGHT_ORANGE_GLOW: RouteHighlightGlow = {
-  color: "#ff9800",
-  opacity: 0.78,
-  width: ROUTE_HIGHLIGHT_GLOW_WIDTH,
-  blur: ROUTE_HIGHLIGHT_GLOW_BLUR,
-};
+function geometryScreenBox(
+  map: maplibregl.Map,
+  geometry: LineString | MultiLineString,
+  paddingPx: number,
+): [maplibregl.PointLike, maplibregl.PointLike] | null {
+  let minLng = Infinity;
+  let minLat = Infinity;
+  let maxLng = -Infinity;
+  let maxLat = -Infinity;
+
+  const visit = (position: Position) => {
+    const lng = position[0];
+    const lat = position[1];
+    if (lng < minLng) minLng = lng;
+    if (lat < minLat) minLat = lat;
+    if (lng > maxLng) maxLng = lng;
+    if (lat > maxLat) maxLat = lat;
+  };
+
+  if (geometry.type === "LineString") {
+    for (const position of geometry.coordinates) {
+      visit(position);
+    }
+  } else {
+    for (const line of geometry.coordinates) {
+      for (const position of line) {
+        visit(position);
+      }
+    }
+  }
+
+  if (!Number.isFinite(minLng)) {
+    return null;
+  }
+
+  const southWest = map.project([minLng, minLat]);
+  const northEast = map.project([maxLng, maxLat]);
+  return [
+    [
+      Math.min(southWest.x, northEast.x) - paddingPx,
+      Math.min(southWest.y, northEast.y) - paddingPx,
+    ],
+    [
+      Math.max(southWest.x, northEast.x) + paddingPx,
+      Math.max(southWest.y, northEast.y) + paddingPx,
+    ],
+  ];
+}
 
 export class Map {
   private map: maplibregl.Map;
@@ -336,8 +300,8 @@ export class Map {
   private mapScaleControl: maplibregl.ScaleControl;
   private selectedFeature: MapFeature | null = null;
   private routeGroupSelection: RouteGroupSelection | null = null;
-  private hoveredStageId: string | null = null;
-  private stageTooltipEl: HTMLDivElement;
+  private highlightExcludedMvtIds: string[] = [];
+  private highlightLayersReady = false;
   private infoPanFeatureId: string | null = null;
   private infoFitKey: string | null = null;
   private eventBus: EventBus;
@@ -372,11 +336,6 @@ export class Map {
       cooperativeGestures: isEmbedded,
     });
 
-    this.stageTooltipEl = document.createElement("div");
-    this.stageTooltipEl.className = "route-stage-tooltip";
-    this.stageTooltipEl.hidden = true;
-    this.map.getContainer().appendChild(this.stageTooltipEl);
-
     this.routeDisambiguationHost = document.createElement("div");
     this.map.getContainer().appendChild(this.routeDisambiguationHost);
 
@@ -387,10 +346,8 @@ export class Map {
     this.map.getContainer().appendChild(this.cameraConsentHost);
 
     new MapInteractionManager(this.map, eventBus, {
-      getRouteGroup: () => this.routeGroupSelection,
       getLockedRouteGroupId: () => this.getLockedRouteGroupId(),
       getMapFilters: () => this.currentFilters,
-      onStageHover: (stageId, point) => this.setHoveredRouteStage(stageId, point),
       onRouteDisambiguation: (context) => this.showRouteDisambiguation(context),
       onTrailDisambiguation: (context) => this.showTrailDisambiguation(context),
     });
@@ -469,9 +426,14 @@ export class Map {
       }
     });
     this.map.on("style.load", () => {
+      this.highlightLayersReady = false;
       applyOpenBikeMapLineMinZoomToMap(this.map);
       applyPaintRulesToMap(this.map);
-      applyFilterRulesToMap(this.map, this.currentFilters);
+      applyFilterRulesToMap(
+        this.map,
+        this.currentFilters,
+        this.highlightExcludedMvtIds,
+      );
       this.updateSelectedHighlight();
     });
 
@@ -528,7 +490,11 @@ export class Map {
 
   private applyFiltersToLiveMap = (): void => {
     applyOpenBikeMapLineMinZoomToMap(this.map);
-    applyFilterRulesToMap(this.map, this.currentFilters);
+    applyFilterRulesToMap(
+      this.map,
+      this.currentFilters,
+      this.highlightExcludedMvtIds,
+    );
     applyPaintRulesToMap(this.map);
   };
 
@@ -572,8 +538,6 @@ export class Map {
     this.closeRouteDisambiguation();
     this.closeTrailDisambiguation();
     this.routeGroupSelection = selectedObject?.routeGroup ?? null;
-    this.hoveredStageId = null;
-    this.hideStageTooltip();
     const feature = selectedObject?.feature ?? null;
     this.selectedFeature = feature;
     this.updateSelectedHighlight();
@@ -731,71 +695,6 @@ export class Map {
     );
   }
 
-  setHoveredRouteStage(
-    stageId: string | null,
-    point?: maplibregl.Point,
-  ): void {
-    if (this.hoveredStageId !== stageId) {
-      this.hoveredStageId = stageId;
-      this.updateSelectedHighlight();
-    }
-    this.updateStageTooltip(stageId, point);
-  }
-
-  private hideStageTooltip(): void {
-    this.stageTooltipEl.hidden = true;
-  }
-
-  private updateStageTooltip(
-    stageId: string | null,
-    point?: maplibregl.Point,
-  ): void {
-    if (!stageId || !point || !this.routeGroupSelection) {
-      this.hideStageTooltip();
-      return;
-    }
-
-    const stage = findRouteStageFeature(this.routeGroupSelection, stageId);
-    if (!stage) {
-      this.hideStageTooltip();
-      return;
-    }
-
-    this.stageTooltipEl.textContent = formatRouteStageTooltip(
-      stage,
-      getUnitSystem(),
-    );
-    this.stageTooltipEl.hidden = false;
-    this.positionStageTooltip(point);
-  }
-
-  /** Keep tooltip clear of oversized system cursors (hotspot is usually top-left). */
-  private positionStageTooltip(point: maplibregl.Point): void {
-    const container = this.map.getContainer();
-    const tooltip = this.stageTooltipEl;
-    const padding = 8;
-    const cursorGap = 56;
-    const width = tooltip.offsetWidth;
-    const height = tooltip.offsetHeight;
-    const maxX = Math.max(padding, container.clientWidth - width - padding);
-    const maxY = Math.max(padding, container.clientHeight - height - padding);
-
-    // Prefer above-right of hotspot so large cursors (extending down/right) don't cover it.
-    let x = point.x + 24;
-    let y = point.y - height - cursorGap;
-
-    if (y < padding) {
-      // Not enough room above — place well below/right instead.
-      x = point.x + cursorGap;
-      y = point.y + cursorGap;
-    }
-
-    x = Math.min(Math.max(x, padding), maxX);
-    y = Math.min(Math.max(y, padding), maxY);
-
-    tooltip.style.transform = `translate(${x}px, ${y}px)`;
-  }
-
   private getLockedRouteGroupId(): string | null {
     if (this.routeGroupSelection) {
       return this.routeGroupSelection.groupId;
@@ -825,30 +724,91 @@ export class Map {
   }
 
   private ensureSelectedHighlightLayer(): void {
-    this.ensureHighlightSourceAndGlowLayer(
-      SELECTED_SOURCE_ID,
-      SELECTED_GLOW_LAYER_ID,
-      ROUTE_HIGHLIGHT_YELLOW_GLOW,
-    );
-    this.ensureHighlightSourceAndGlowLayer(
-      SELECTED_GROUP_SOURCE_ID,
-      SELECTED_GROUP_GLOW_LAYER_ID,
-      ROUTE_HIGHLIGHT_YELLOW_GLOW,
-    );
-    this.ensureHighlightSourceAndGlowLayer(
-      SELECTED_STAGE_SOURCE_ID,
-      SELECTED_STAGE_GLOW_LAYER_ID,
-      ROUTE_HIGHLIGHT_ORANGE_GLOW,
-    );
+    this.ensureHighlightSources();
 
-    this.repositionSelectedHighlightLayers();
+    const anchor = this.getFeatureHighlightAnchor();
+    if (!anchor.ready) {
+      return;
+    }
+
+    this.removeLegacyHighlightLayers();
+
+    if (!this.highlightLayersReady) {
+      this.ensureHighlightGlowLayer(
+        SELECTED_GLOW_LAYER_ID,
+        SELECTED_HALO_SOURCE_ID,
+        ROUTE_HIGHLIGHT_YELLOW_GLOW,
+        anchor.insertBeforeId,
+      );
+      this.ensureSelectedLineLayer(anchor.insertBeforeId);
+      this.highlightLayersReady = Boolean(
+        this.map.getLayer(highlightCoreLayerId(SELECTED_GLOW_LAYER_ID)),
+      );
+      return;
+    }
+
+    this.ensureHighlightGlowLayer(
+      SELECTED_GLOW_LAYER_ID,
+      SELECTED_HALO_SOURCE_ID,
+      ROUTE_HIGHLIGHT_YELLOW_GLOW,
+      anchor.insertBeforeId,
+    );
+    this.ensureSelectedLineLayer(anchor.insertBeforeId);
   }
 
-  /** Layer id to insert highlight layers before (= draw on top of route/trail MVT). */
-  private getFeatureHighlightInsertBeforeLayerId(): string | undefined {
+  private ensureHighlightSources(): void {
+    if (!this.map.getSource(SELECTED_HALO_SOURCE_ID)) {
+      this.map.addSource(SELECTED_HALO_SOURCE_ID, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+    }
+    if (!this.map.getSource(SELECTED_SOURCE_ID)) {
+      this.map.addSource(SELECTED_SOURCE_ID, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+    }
+  }
+
+  private removeLegacyHighlightLayers(): void {
+    const glowLayerId = SELECTED_GLOW_LAYER_ID;
+    const legacyLayerIds = [
+      highlightOutlineLayerId(glowLayerId),
+      highlightCasingLayerId(glowLayerId),
+      highlightStsOuterLayerId(glowLayerId),
+      highlightStsCenterLayerId(glowLayerId),
+      highlightImbaLineLayerId(glowLayerId),
+      "openbikemap-selected-group-line-glow",
+      "openbikemap-selected-group-line-glow-outline",
+      "openbikemap-selected-group-line-casing",
+      "openbikemap-selected-group-line",
+      "openbikemap-selected-group-sts-outer",
+      "openbikemap-selected-group-sts-center",
+      "openbikemap-selected-group-imba-line",
+      "openbikemap-selected-group-label-stripe",
+      "openbikemap-selected-group-label",
+    ];
+
+    for (const layerId of legacyLayerIds) {
+      if (this.map.getLayer(layerId)) {
+        this.map.removeLayer(layerId);
+      }
+    }
+
+    if (this.map.getSource("openbikemap-selected-group")) {
+      this.map.removeSource("openbikemap-selected-group");
+    }
+  }
+
+  /** Where to insert highlight layers (undefined = on top of the style). */
+  private getFeatureHighlightAnchor(): {
+    ready: boolean;
+    insertBeforeId?: string;
+  } {
     const style = this.map.getStyle();
     if (!style?.layers) {
-      return undefined;
+      return { ready: false };
     }
 
     let lastFeatureLayerIndex = -1;
@@ -863,135 +823,36 @@ export class Map {
     }
 
     if (lastFeatureLayerIndex === -1) {
-      return undefined;
+      return { ready: false };
     }
 
-    return style.layers[lastFeatureLayerIndex + 1]?.id;
+    return {
+      ready: true,
+      insertBeforeId: style.layers[lastFeatureLayerIndex + 1]?.id,
+    };
   }
 
-  private repositionSelectedHighlightLayers(): void {
-    const insertBeforeId = this.getFeatureHighlightInsertBeforeLayerId();
-    if (!insertBeforeId) {
-      return;
-    }
-
-    for (const glowLayerId of ROUTE_HIGHLIGHT_GLOW_LAYER_IDS) {
-      const stackBottomToTop = [
-        highlightOutlineLayerId(glowLayerId),
-        glowLayerId,
-        highlightCasingLayerId(glowLayerId),
-        highlightCoreLayerId(glowLayerId),
-        highlightStsOuterLayerId(glowLayerId),
-        highlightStsCenterLayerId(glowLayerId),
-        highlightImbaLineLayerId(glowLayerId),
-        highlightLabelStripeLayerId(glowLayerId),
-        highlightLabelLayerId(glowLayerId),
-      ];
-
-      for (const layerId of stackBottomToTop) {
-        if (this.map.getLayer(layerId)) {
-          this.map.moveLayer(layerId, insertBeforeId);
-        }
-      }
-    }
-  }
-
-  private ensureHighlightSourceAndGlowLayer(
-    sourceId: string,
-    glowLayerId: string,
-    glow: RouteHighlightGlow,
-  ): void {
-    if (!this.map.getSource(sourceId)) {
-      this.map.addSource(sourceId, {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
-    }
-
-    this.ensureHighlightGlowLayer(glowLayerId, sourceId, glow);
-    this.ensureHighlightFeatureOverlayLayers(glowLayerId, sourceId);
-  }
-
-  private ensureHighlightFeatureOverlayLayers(
-    glowLayerId: string,
-    sourceId: string,
-  ): void {
+  private ensureSelectedLineLayer(insertBeforeId?: string): void {
+    const glowLayerId = SELECTED_GLOW_LAYER_ID;
+    const lineLayerId = highlightCoreLayerId(glowLayerId);
     const lineLayout: maplibregl.LineLayerSpecification["layout"] = {
       "line-cap": "round",
       "line-join": "round",
     };
 
-    this.ensureHighlightLineLayer(
-      highlightCasingLayerId(glowLayerId),
-      sourceId,
-      {
-        paint: {
-          "line-color": "#ffffff",
-          "line-width": ROUTE_HIGHLIGHT_CASING_LINE_WIDTH,
-          "line-opacity": 0.95,
-        },
-        layout: lineLayout,
-        filter: ROUTE_HIGHLIGHT_OVERLAY_FILTER,
+    this.ensureHighlightLineLayer(lineLayerId, SELECTED_SOURCE_ID, {
+      paint: {
+        "line-color": HIGHLIGHT_LINE_COLOR_EXPRESSION,
+        "line-width": ROUTE_HIGHLIGHT_CORE_LINE_WIDTH,
+        "line-opacity": 1,
       },
-    );
-
-    this.ensureHighlightLineLayer(
-      highlightCoreLayerId(glowLayerId),
-      sourceId,
-      {
-        paint: {
-          "line-color": HIGHLIGHT_LINE_COLOR,
-          "line-width": ROUTE_HIGHLIGHT_CORE_LINE_WIDTH,
-        },
-        layout: lineLayout,
-        filter: ROUTE_HIGHLIGHT_OVERLAY_FILTER,
-      },
-    );
-
-    this.ensureHighlightLineLayer(
-      highlightStsOuterLayerId(glowLayerId),
-      sourceId,
-      {
-        paint: {
-          "line-color": HIGHLIGHT_LINE_COLOR,
-          "line-width": TRAIL_HIGHLIGHT_STS_CASING_WIDTH,
-          "line-opacity": 0.95,
-        },
-        layout: lineLayout,
-        filter: STS_TRAIL_HIGHLIGHT_OVERLAY_FILTER,
-      },
-    );
-
-    this.ensureHighlightLineLayer(
-      highlightStsCenterLayerId(glowLayerId),
-      sourceId,
-      {
-        paint: {
-          "line-color": TRAIL_STS_CENTER_LINE_COLOR,
-          "line-width": TRAIL_HIGHLIGHT_STS_CENTER_WIDTH,
-        },
-        layout: lineLayout,
-        filter: STS_TRAIL_HIGHLIGHT_OVERLAY_FILTER,
-      },
-    );
-
-    this.ensureHighlightLineLayer(
-      highlightImbaLineLayerId(glowLayerId),
-      sourceId,
-      {
-        paint: {
-          "line-color": HIGHLIGHT_LINE_COLOR,
-          "line-width": TRAIL_HIGHLIGHT_IMBA_LINE_WIDTH,
-          "line-dasharray": TRAIL_HIGHLIGHT_IMBA_DASHARRAY,
-        },
-        layout: lineLayout,
-        filter: IMBA_TRAIL_HIGHLIGHT_OVERLAY_FILTER,
-      },
-    );
+      layout: lineLayout,
+      filter: HIGHLIGHT_LINE_OVERLAY_FILTER,
+    }, insertBeforeId);
 
     this.ensureHighlightSymbolLayer(
       highlightLabelStripeLayerId(glowLayerId),
-      sourceId,
+      SELECTED_SOURCE_ID,
       {
         minzoom: 11,
         layout: {
@@ -1005,13 +866,14 @@ export class Map {
           "text-halo-color": HIGHLIGHT_LINE_COLOR,
           "text-halo-width": 5,
         },
-        filter: HIGHLIGHT_LABEL_OVERLAY_FILTER,
+        filter: HIGHLIGHT_LABEL_FILTER,
       },
+      insertBeforeId,
     );
 
     this.ensureHighlightSymbolLayer(
       highlightLabelLayerId(glowLayerId),
-      sourceId,
+      SELECTED_SOURCE_ID,
       {
         minzoom: 11,
         layout: {
@@ -1025,8 +887,9 @@ export class Map {
           "text-halo-color": "#ffffff",
           "text-halo-width": 1.75,
         },
-        filter: HIGHLIGHT_LABEL_OVERLAY_FILTER,
+        filter: HIGHLIGHT_LABEL_FILTER,
       },
+      insertBeforeId,
     );
   }
 
@@ -1038,13 +901,16 @@ export class Map {
       layout?: maplibregl.LineLayerSpecification["layout"];
       filter?: maplibregl.ExpressionFilterSpecification;
     },
+    insertBeforeId?: string,
   ): void {
     if (this.map.getLayer(layerId)) {
       this.map.setFilter(layerId, options.filter ?? null);
+      for (const [property, value] of Object.entries(options.paint ?? {})) {
+        this.map.setPaintProperty(layerId, property, value);
+      }
       return;
     }
 
-    const insertBeforeId = this.getFeatureHighlightInsertBeforeLayerId();
     this.map.addLayer(
       {
         id: layerId,
@@ -1067,13 +933,13 @@ export class Map {
       paint: maplibregl.SymbolLayerSpecification["paint"];
       filter?: maplibregl.ExpressionFilterSpecification;
     },
+    insertBeforeId?: string,
   ): void {
     if (this.map.getLayer(layerId)) {
       this.map.setFilter(layerId, options.filter ?? null);
       return;
     }
 
-    const insertBeforeId = this.getFeatureHighlightInsertBeforeLayerId();
     this.map.addLayer(
       {
         id: layerId,
@@ -1092,67 +958,28 @@ export class Map {
     layerId: string,
     sourceId: string,
     glow: RouteHighlightGlow,
+    insertBeforeId?: string,
   ): void {
-    if (glow.outline) {
-      this.ensureHighlightOutlineLayer(layerId, sourceId, glow.outline);
-    } else {
-      this.removeHighlightOutlineLayer(layerId);
-    }
+    this.removeHighlightOutlineLayer(layerId);
 
     if (this.map.getLayer(layerId)) {
+      this.map.setFilter(layerId, HIGHLIGHT_GLOW_OVERLAY_FILTER);
       this.map.setPaintProperty(layerId, "line-color", glow.color);
       this.map.setPaintProperty(layerId, "line-width", glow.width);
       this.map.setPaintProperty(layerId, "line-opacity", glow.opacity);
-      this.map.setPaintProperty(layerId, "line-blur", glow.blur);
       return;
     }
 
-    const insertBeforeId = this.getFeatureHighlightInsertBeforeLayerId();
     this.map.addLayer(
       {
         id: layerId,
         type: "line",
         source: sourceId,
+        filter: HIGHLIGHT_GLOW_OVERLAY_FILTER,
         paint: {
           "line-color": glow.color,
           "line-width": glow.width,
           "line-opacity": glow.opacity,
-          "line-blur": glow.blur,
-        },
-        layout: {
-          "line-cap": "round",
-          "line-join": "round",
-        },
-      },
-      insertBeforeId,
-    );
-  }
-
-  private ensureHighlightOutlineLayer(
-    glowLayerId: string,
-    sourceId: string,
-    outline: RouteHighlightOutline,
-  ): void {
-    const layerId = highlightOutlineLayerId(glowLayerId);
-
-    if (this.map.getLayer(layerId)) {
-      this.map.setPaintProperty(layerId, "line-color", outline.color);
-      this.map.setPaintProperty(layerId, "line-width", outline.width);
-      this.map.setPaintProperty(layerId, "line-opacity", outline.opacity);
-      return;
-    }
-
-    const insertBeforeId = this.getFeatureHighlightInsertBeforeLayerId();
-    this.map.addLayer(
-      {
-        id: layerId,
-        type: "line",
-        source: sourceId,
-        paint: {
-          "line-color": outline.color,
-          "line-width": outline.width,
-          "line-opacity": outline.opacity,
-          "line-blur": 0,
         },
         layout: {
           "line-cap": "round",
@@ -1170,15 +997,117 @@ export class Map {
     }
   }
 
-  private setHighlightSourceData(
-    sourceId: string,
-    features: MapFeature[],
+  private collectMvtIdsForFeature(
+    feature: MapFeature,
+    ids: Set<string>,
   ): void {
-    const source = this.map.getSource(sourceId) as maplibregl.GeoJSONSource;
-    source.setData({
-      type: "FeatureCollection",
+    for (const related of findRelatedFeatures(this.map, feature)) {
+      ids.add(related.properties.id);
+    }
+
+    const sourceLayer =
+      feature.properties.type === FeatureType.Route ? "routes" : "trails";
+    const layerIds =
+      feature.properties.type === FeatureType.Route
+        ? ROUTE_LAYER_STACK
+        : TRAIL_LAYER_STACK;
+    const layers = layerIds.filter((layerId) => this.map.getLayer(layerId));
+    if (layers.length === 0) {
+      return;
+    }
+
+    const screenBox = geometryScreenBox(this.map, feature.geometry, 32);
+    if (!screenBox) {
+      return;
+    }
+
+    const groupId = feature.properties.groupId;
+    const name = feature.properties.name;
+    const ref =
+      feature.properties.type === FeatureType.Route
+        ? feature.properties.ref
+        : null;
+
+    for (const raw of this.map.queryRenderedFeatures(screenBox, { layers })) {
+      if (raw.source !== "openbikemap" || raw.sourceLayer !== sourceLayer) {
+        continue;
+      }
+
+      const id = raw.properties?.id;
+      if (id == null || id === "") {
+        continue;
+      }
+      const idStr = String(id);
+      if (ids.has(idStr)) {
+        continue;
+      }
+
+      if (groupId && String(raw.properties?.groupId ?? "") === groupId) {
+        ids.add(idStr);
+        continue;
+      }
+      if (name && String(raw.properties?.name ?? "") === name) {
+        ids.add(idStr);
+        continue;
+      }
+      if (ref && String(raw.properties?.ref ?? "") === ref) {
+        ids.add(idStr);
+      }
+    }
+  }
+
+  private resolveHighlightExcludedMvtIds(
+    highlightedFeatures: MapFeature[],
+  ): string[] {
+    const ids = new Set<string>();
+    const routeGroup = this.routeGroupSelection;
+    const stageFeatures = routeGroup?.stageFeatures;
+
+    if (routeGroup && stageFeatures && stageFeatures.length > 0) {
+      if (routeGroup.activeStageId) {
+        const stage = findRouteStageFeature(
+          routeGroup,
+          routeGroup.activeStageId,
+        );
+        if (stage) {
+          this.collectMvtIdsForFeature(stage, ids);
+        }
+      } else {
+        for (const stage of stageFeatures) {
+          this.collectMvtIdsForFeature(stage, ids);
+        }
+      }
+      return [...ids];
+    }
+
+    for (const feature of highlightedFeatures) {
+      this.collectMvtIdsForFeature(feature, ids);
+    }
+    return [...ids];
+  }
+
+  private applyHighlightMvtMask(excludedIds: string[]): void {
+    this.highlightExcludedMvtIds = excludedIds;
+    applyFilterRulesToMap(this.map, this.currentFilters, excludedIds);
+  }
+
+  private setHighlightSourceData(features: MapFeature[]): void {
+    const lineSource = this.map.getSource(
+      SELECTED_SOURCE_ID,
+    ) as maplibregl.GeoJSONSource | undefined;
+    const haloSource = this.map.getSource(
+      SELECTED_HALO_SOURCE_ID,
+    ) as maplibregl.GeoJSONSource | undefined;
+    if (!lineSource || !haloSource) {
+      return;
+    }
+
+    const data = {
+      type: "FeatureCollection" as const,
       features: normalizeHighlightFeatures(features),
-    });
+    };
+    lineSource.setData(data);
+    haloSource.setData(data);
   }
 
   private updateSelectedHighlight(): void {
@@ -1190,30 +1119,32 @@ export class Map {
     this.ensureSelectedHighlightLayer();
 
     const routeGroup = this.routeGroupSelection;
-    // Selected features always highlight — map filters only hide base MVT layers.
     const stageFeatures = routeGroup?.stageFeatures;
+    let highlightFeatures: MapFeature[] = [];
 
     if (routeGroup && stageFeatures && stageFeatures.length > 0) {
-      this.setHighlightSourceData(SELECTED_GROUP_SOURCE_ID, stageFeatures);
-      this.setHighlightSourceData(SELECTED_SOURCE_ID, []);
-
-      const orangeStageId = this.hoveredStageId ?? routeGroup.activeStageId;
-      const orangeStage = orangeStageId
-        ? findRouteStageFeature(routeGroup, orangeStageId)
-        : undefined;
-      this.setHighlightSourceData(
-        SELECTED_STAGE_SOURCE_ID,
-        orangeStage ? [orangeStage] : [],
-      );
-      return;
+      if (routeGroup.activeStageId) {
+        const stage = findRouteStageFeature(
+          routeGroup,
+          routeGroup.activeStageId,
+        );
+        highlightFeatures = stage ? [stage] : [];
+      } else {
+        highlightFeatures = [routeGroup.wholeRouteFeature];
+      }
+    } else if (this.selectedFeature) {
+      highlightFeatures = [this.selectedFeature];
     }
 
-    this.setHighlightSourceData(SELECTED_GROUP_SOURCE_ID, []);
-    this.setHighlightSourceData(SELECTED_STAGE_SOURCE_ID, []);
-
-    this.setHighlightSourceData(
-      SELECTED_SOURCE_ID,
-      this.selectedFeature ? [this.selectedFeature] : [],
-    );
+    this.setHighlightSourceData(highlightFeatures);
+    const excludedIds = this.resolveHighlightExcludedMvtIds(highlightFeatures);
+    this.applyHighlightMvtMask(excludedIds);
+    if (highlightFeatures.length > 0) {
+      this.map.once("idle", () => {
+        this.applyHighlightMvtMask(
+          this.resolveHighlightExcludedMvtIds(highlightFeatures),
+        );
+      });
+    }
   }
 }

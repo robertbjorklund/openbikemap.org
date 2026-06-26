@@ -7,7 +7,7 @@ import {
   type TrailFeature,
   type TrailProperties,
 } from "../types/FeatureTypes";
-import { imbaTrailColor, mtbTrailColor } from "../types/MtbTrailColors";
+import { trailLineColorFromProperties, isImbaRatedTrail } from "../types/MtbTrailColors";
 import { featuresForHighlight } from "./FeatureGroup";
 import { mtbRouteColor } from "../types/MtbRouteColors";
 import { routeNetworkColor } from "../types/RouteNetwork";
@@ -40,6 +40,18 @@ export const HIGHLIGHT_LABEL_OVERLAY_FILTER: maplibregl.ExpressionFilterSpecific
     ["literal", [FeatureType.Route, FeatureType.Trail]],
   ];
 
+/** MapLibre filter: yellow halo under the opaque selected line. */
+export const HIGHLIGHT_GLOW_OVERLAY_FILTER: maplibregl.ExpressionFilterSpecification =
+  [
+    "in",
+    ["get", "type"],
+    ["literal", [FeatureType.Route, FeatureType.Trail]],
+  ];
+
+/** MapLibre filter: opaque selected route/trail line above the halo. */
+export const HIGHLIGHT_LINE_OVERLAY_FILTER: maplibregl.ExpressionFilterSpecification =
+  HIGHLIGHT_GLOW_OVERLAY_FILTER;
+
 export function computeRouteHighlightColor(
   properties: RouteProperties,
 ): string {
@@ -56,10 +68,7 @@ export function computeRouteHighlightColor(
 export function computeTrailHighlightColor(
   properties: TrailProperties,
 ): string {
-  if (properties.mtbScaleImba !== null) {
-    return imbaTrailColor(properties.mtbScaleImba);
-  }
-  return mtbTrailColor(properties.mtbScale);
+  return trailLineColorFromProperties(properties);
 }
 
 export function normalizeRouteHighlightFeature(
@@ -92,10 +101,9 @@ export function normalizeTrailHighlightFeature(
   }
 
   const props = feature.properties as TrailProperties & {
-    color?: string | null;
     isImbaTrail?: boolean;
   };
-  const isImbaTrail = props.mtbScaleImba !== null;
+  const isImbaTrail = isImbaRatedTrail(props.mtbScaleImba);
 
   return {
     ...feature,
@@ -103,7 +111,7 @@ export function normalizeTrailHighlightFeature(
       ...props,
       type: FeatureType.Trail,
       isImbaTrail,
-      color: props.color ?? computeTrailHighlightColor(props),
+      color: computeTrailHighlightColor(props),
     },
   } as TrailFeature;
 }

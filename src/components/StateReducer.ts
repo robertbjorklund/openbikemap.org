@@ -511,6 +511,7 @@ export default class StateReducer implements EventBus {
         ...this._state.selectedObject!,
         id: stage.properties.id,
         feature: stage,
+        fitToMap: true,
         routeGroup: {
           ...routeGroup,
           activeStageId: stageId,
@@ -529,6 +530,7 @@ export default class StateReducer implements EventBus {
         ...this._state.selectedObject!,
         id: routeGroup.wholeRouteFeature.properties.id,
         feature: routeGroup.wholeRouteFeature,
+        fitToMap: true,
         routeGroup: {
           ...routeGroup,
           activeStageId: null,

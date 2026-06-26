@@ -55,6 +55,14 @@ function initialize() {
     cameraPositionManager,
   );
 
+  if (import.meta.env.DEV) {
+    (
+      window as Window & {
+        __openBikeMap?: Map;
+      }
+    ).__openBikeMap = map;
+  }
+
   store.urlUpdate(getURLState());
   map.setStyle(store._state.mapStyle);
   map.setFilters(store._state.mapFilters);
