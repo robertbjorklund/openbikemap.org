@@ -13,7 +13,11 @@ import { getSegmentCount } from "../utils/FeatureGroup";
 
 import { formatLength, getFeatureLengthMeters } from "../utils/Length";
 
+import { parseRouteDisplayName } from "../utils/RouteDisplayName";
 import { formatRouteStageLabel } from "../utils/RouteStage";
+import {
+  inferSverigeledenSectionLabel,
+} from "../utils/SverigeledenSection";
 import { getMapFeatureKind } from "../utils/MapFeatureKind";
 import { FeatureDetailStat } from "./FeatureDetailStat";
 import { CardHeader } from "./CardHeader";
@@ -84,7 +88,14 @@ function RouteInfoBody({
 
   const { properties } = feature;
 
-  const title = formatRouteDisplayTitle(properties.name, properties.ref);
+  const title =
+    routeGroup && !routeGroup.activeStageId
+      ? inferSverigeledenSectionLabel(
+          routeGroup.stageFeatures.map((stage) => stage.properties),
+          parseRouteDisplayName,
+        ) ??
+        formatRouteDisplayTitle(properties.name, properties.ref)
+      : formatRouteDisplayTitle(properties.name, properties.ref);
 
   const stageLabel = formatRouteStageLabel(properties);
   const isStageView = !!routeGroup?.activeStageId;
@@ -192,7 +203,9 @@ function RouteInfoBody({
         </FeatureDetailStat>
       )}
 
-      {!compactMobile && <ElevationStats feature={feature} map={map} />}
+      {!compactMobile && !(routeGroup && !routeGroup.activeStageId) && (
+        <ElevationStats feature={feature} map={map} />
+      )}
 
       {!compactMobile && (
         <FeatureWeather

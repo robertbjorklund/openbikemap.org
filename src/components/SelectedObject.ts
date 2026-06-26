@@ -23,4 +23,6 @@ export interface SelectedObject {
   feature?: MapFeature;
   routeGroup?: RouteGroupSelection;
   pan?: PanConfig;
+  /** Fit map viewport to feature bounds (search / deep link without map click). */
+  fitToMap?: boolean;
 }

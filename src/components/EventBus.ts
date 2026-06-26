@@ -37,6 +37,9 @@ export interface ShowInfoOptions {
 
   focusClickX?: number;
 
+  /** Fit the map to the feature bounds when opening the detail panel. */
+  fitToMap?: boolean;
+
 }
 
 

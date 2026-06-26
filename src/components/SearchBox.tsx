@@ -11,15 +11,23 @@ import * as React from "react";
 import { debounce, throttle } from "throttle-debounce";
 import { API_BASE_URL } from "../Config";
 import { MapMarker } from "../MapMarker";
-import { AppConfig } from "../AppConfig";
-import { FeatureType, type MapFeature } from "../types/FeatureTypes";
-import { getDefaultFeatureTitle, getMapFeatureKind } from "../utils/MapFeatureKind";
+import { type MapFeature } from "../types/FeatureTypes";
 import EventBus from "./EventBus";
 import { trackMatomoEvent } from "../utils/matomo";
+import {
+  getSearchResultSubtitle,
+  getSearchResultTitle,
+  groupSearchFeatures,
+  resolveSearchSelectionFeature,
+  type GroupedSearchHit,
+} from "../utils/searchResults";
 
 type CommandResult = { type: "add_marker"; data: MapMarker };
-type LocationResult = { type: "location"; data: MapFeature };
+type LocationResult = { type: "location"; data: GroupedSearchHit };
 type SearchResult = CommandResult | LocationResult;
+
+const SEARCH_RESULT_LIMIT = 100;
+const SEARCH_DISPLAY_LIMIT = 12;
 
 export const SearchBox: React.FunctionComponent<{
   eventBus: EventBus;
@@ -71,8 +79,9 @@ export const SearchBox: React.FunctionComponent<{
       });
     }
 
+    const grouped = groupSearchFeatures(features).slice(0, SEARCH_DISPLAY_LIMIT);
     nextResults = nextResults.concat(
-      features.map((feature) => ({ type: "location", data: feature })),
+      grouped.map((hit) => ({ type: "location" as const, data: hit })),
     );
 
     setResults(nextResults);
@@ -82,7 +91,7 @@ export const SearchBox: React.FunctionComponent<{
   const runSearch = React.useMemo(
     () => (searchQuery: string) => {
       fetch(
-        `${API_BASE_URL}/search?query=${encodeURIComponent(searchQuery)}`,
+        `${API_BASE_URL}/search?query=${encodeURIComponent(searchQuery)}&limit=${SEARCH_RESULT_LIMIT}`,
       ).then((response) => {
         if (queryRef.current !== searchQuery) {
           return;
@@ -114,7 +123,7 @@ export const SearchBox: React.FunctionComponent<{
     }
   };
 
-  const selectResult = (result: SearchResult) => {
+  const selectResult = async (result: SearchResult) => {
     setQuery("");
     setResults([]);
     setHideResults(true);
@@ -126,9 +135,17 @@ export const SearchBox: React.FunctionComponent<{
       return;
     }
 
-    trackMatomoEvent("Search", "Select", result.data.properties.type);
-    props.eventBus.showInfo(result.data.properties.id, {
-      clickedFeature: result.data,
+    const hit = result.data;
+    trackMatomoEvent("Search", "Select", hit.feature.properties.type);
+
+    const { primary, related, display } = await resolveSearchSelectionFeature(
+      hit.feature,
+    );
+
+    props.eventBus.showInfo(primary.properties.id, {
+      clickedFeature: display,
+      relatedFeatures: related,
+      fitToMap: true,
     });
   };
 
@@ -140,7 +157,7 @@ export const SearchBox: React.FunctionComponent<{
       event.preventDefault();
       setSelectedIndex((index) => Math.min(results.length - 1, index + 1));
     } else if (event.key === "Enter" && results.length > 0) {
-      selectResult(results[selectedIndex]);
+      void selectResult(results[selectedIndex]);
     } else if (event.key === "Escape") {
       setHideResults(true);
       inputRef.current?.blur();
@@ -171,7 +188,7 @@ export const SearchBox: React.FunctionComponent<{
                 {index > 0 && <Divider />}
                 <ListItemButton
                   selected={selectedIndex === index}
-                  onClick={() => selectResult(result)}
+                  onClick={() => void selectResult(result)}
                 >
                   <ListItemText
                     primary={primaryText(result)}
@@ -191,15 +208,17 @@ function resultKey(result: SearchResult, index: number): string {
   if (result.type === "add_marker") {
     return "add_marker";
   }
-  return `location_${result.data.properties.id}_${index}`;
+  const { feature, mergedHitCount } = result.data;
+  const groupKey = feature.properties.groupId ?? feature.properties.id;
+  return `location_${groupKey}_${mergedHitCount}_${index}`;
 }
 
 function primaryText(result: SearchResult): string {
   if (result.type === "add_marker") {
     return "Mark location";
   }
-  const { properties } = result.data;
-  return properties.name || properties.ref || getDefaultFeatureTitle(result.data);
+  const { feature, mergedHitCount } = result.data;
+  return getSearchResultTitle(feature, mergedHitCount);
 }
 
 function secondaryText(result: SearchResult): string {
@@ -210,9 +229,6 @@ function secondaryText(result: SearchResult): string {
     return `Location: ${Math.abs(latitude)}°${latDirection}, ${Math.abs(longitude)}°${lonDirection}`;
   }
 
-  const { properties } = result.data;
-  if (properties.type === FeatureType.Route) {
-    return AppConfig.layerFilters.routes.featureLabel;
-  }
-  return getMapFeatureKind(result.data).label;
+  const { feature, mergedHitCount } = result.data;
+  return getSearchResultSubtitle(feature, mergedHitCount);
 }

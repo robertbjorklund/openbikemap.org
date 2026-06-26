@@ -15,6 +15,8 @@ import {
 } from "../utils/routeHighlightProperties";
 import { findRouteStageFeature } from "../utils/routeGroupSelection";
 import {
+  featureFitGeometryKey,
+  fitMapToFeature,
   panMapToCenterFeatureInVisibleArea,
 } from "../utils/mapInfoPanelFocus";
 import { formatRouteStageTooltip } from "../utils/RouteStage";
@@ -26,7 +28,6 @@ import EventBus from "./EventBus";
 import {
   applyFilterRulesToMap,
   applyFiltersToStyleLayers,
-  isFeatureVisibleUnderFilters,
 } from "./MapFilterRules";
 import {
   applyOpenBikeMapLineMinZoomToMap,
@@ -338,6 +339,7 @@ export class Map {
   private hoveredStageId: string | null = null;
   private stageTooltipEl: HTMLDivElement;
   private infoPanFeatureId: string | null = null;
+  private infoFitKey: string | null = null;
   private eventBus: EventBus;
   private routeDisambiguationHost: HTMLDivElement;
   private routeDisambiguationRoot: ReactDOM.Root | null = null;
@@ -696,10 +698,23 @@ export class Map {
   private focusMapForInfoPanel(
     selectedObject: SelectedObject | null | undefined,
   ): void {
-    if (!selectedObject?.showInfo || !selectedObject.pan) {
-      if (!selectedObject) {
-        this.infoPanFeatureId = null;
+    if (!selectedObject) {
+      this.infoPanFeatureId = null;
+      this.infoFitKey = null;
+      return;
+    }
+
+    if (selectedObject.fitToMap && selectedObject.feature) {
+      const fitKey = `${selectedObject.id}:${featureFitGeometryKey(selectedObject.feature)}`;
+      if (this.infoFitKey !== fitKey) {
+        this.infoFitKey = fitKey;
+        fitMapToFeature(this.map, selectedObject.feature);
       }
+    } else {
+      this.infoFitKey = null;
+    }
+
+    if (!selectedObject.showInfo || !selectedObject.pan) {
       return;
     }
 
@@ -1168,32 +1183,27 @@ export class Map {
 
   private updateSelectedHighlight(): void {
     if (!this.map.isStyleLoaded()) {
+      this.map.once("style.load", () => this.updateSelectedHighlight());
       return;
     }
 
     this.ensureSelectedHighlightLayer();
 
     const routeGroup = this.routeGroupSelection;
-    const visibleStages = routeGroup?.stageFeatures.filter(
-      (feature) => isFeatureVisibleUnderFilters(feature, this.currentFilters),
-    );
+    // Selected features always highlight — map filters only hide base MVT layers.
+    const stageFeatures = routeGroup?.stageFeatures;
 
-    if (routeGroup && visibleStages && visibleStages.length > 0) {
-      this.setHighlightSourceData(SELECTED_GROUP_SOURCE_ID, visibleStages);
+    if (routeGroup && stageFeatures && stageFeatures.length > 0) {
+      this.setHighlightSourceData(SELECTED_GROUP_SOURCE_ID, stageFeatures);
       this.setHighlightSourceData(SELECTED_SOURCE_ID, []);
 
       const orangeStageId = this.hoveredStageId ?? routeGroup.activeStageId;
       const orangeStage = orangeStageId
         ? findRouteStageFeature(routeGroup, orangeStageId)
         : undefined;
-      const visibleOrangeStage =
-        orangeStage &&
-        isFeatureVisibleUnderFilters(orangeStage, this.currentFilters)
-          ? orangeStage
-          : null;
       this.setHighlightSourceData(
         SELECTED_STAGE_SOURCE_ID,
-        visibleOrangeStage ? [visibleOrangeStage] : [],
+        orangeStage ? [orangeStage] : [],
       );
       return;
     }
@@ -1201,14 +1211,9 @@ export class Map {
     this.setHighlightSourceData(SELECTED_GROUP_SOURCE_ID, []);
     this.setHighlightSourceData(SELECTED_STAGE_SOURCE_ID, []);
 
-    const highlightFeature =
-      this.selectedFeature &&
-      isFeatureVisibleUnderFilters(this.selectedFeature, this.currentFilters)
-        ? this.selectedFeature
-        : null;
     this.setHighlightSourceData(
       SELECTED_SOURCE_ID,
-      highlightFeature ? [highlightFeature] : [],
+      this.selectedFeature ? [this.selectedFeature] : [],
     );
   }
 }

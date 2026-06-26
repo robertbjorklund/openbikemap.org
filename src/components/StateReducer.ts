@@ -13,7 +13,7 @@ import {
   ROUTE_NETWORK_FILTERS,
   type RouteNetworkFilter,
 } from "../types/RouteNetwork";
-import { type MapFeature } from "../types/FeatureTypes";
+import { FeatureType, type MapFeature, type RouteProperties } from "../types/FeatureTypes";
 import { mergeSegmentGroup } from "../utils/FeatureGroup";
 import { resolveFeatureGroup } from "../utils/resolveFeatureGroup";
 import {
@@ -38,6 +38,44 @@ function buildDisplayFeature(
 ): MapFeature {
   if (relatedFeatures.length <= 1) {
     return primary;
+  }
+
+  const groupId = primary.properties.groupId;
+  if (groupId) {
+    const groupMembers = relatedFeatures.filter(
+      (feature) => feature.properties.groupId === groupId,
+    );
+    if (groupMembers.length > 1) {
+      if (primary.properties.type === FeatureType.Route) {
+        const stageIds = new Set(
+          groupMembers
+            .filter(
+              (feature): feature is MapFeature & { properties: RouteProperties } =>
+                feature.properties.type === FeatureType.Route &&
+                !!feature.properties.stageId,
+            )
+            .map((feature) => feature.properties.stageId),
+        );
+        if (stageIds.size > 1) {
+          const stageId = primary.properties.stageId;
+          const stagePeers = groupMembers.filter(
+            (feature): feature is MapFeature & { properties: RouteProperties } =>
+              feature.properties.type === FeatureType.Route &&
+              feature.properties.stageId === stageId,
+          );
+          if (stagePeers.length > 1) {
+            return mergeSegmentGroup(primary, stagePeers, {
+              mergeElevation: false,
+            });
+          }
+          return primary;
+        }
+        return mergeSegmentGroup(primary, groupMembers, {
+          mergeElevation: false,
+        });
+      }
+      return mergeSegmentGroup(primary, groupMembers);
+    }
   }
 
   const sameIdSegments = relatedFeatures.filter(
@@ -381,25 +419,21 @@ export default class StateReducer implements EventBus {
         apiFeature,
         relatedFeatures,
       );
-      const fullRelated =
-        expandedRelated.length > 1 &&
-        apiFeature.properties.groupId &&
-        expandedRelated.every((feature) => feature.geometry)
-          ? expandedRelated
-          : await this.loadFullRelatedFeatures(
-              id,
-              idType,
-              expandedRelated,
-              apiFeature,
-            );
+      const fullRelated = await this.loadFullRelatedFeatures(
+        id,
+        idType,
+        expandedRelated,
+        apiFeature,
+      );
 
       this.update({
         selectedObject: {
-          ...this._state.selectedObject,
+          ...this._state.selectedObject!,
           feature: buildDisplayFeature(apiFeature, fullRelated),
           routeGroup: buildRouteGroupSelection(apiFeature, fullRelated),
         },
       });
+      return;
     } catch (error) {
       console.log(error);
       if (this._state.selectedObject?.id !== id) {
@@ -451,6 +485,7 @@ export default class StateReducer implements EventBus {
                 clickX: options.focusClickX,
               }
             : undefined,
+        fitToMap: options?.fitToMap,
       },
     });
 

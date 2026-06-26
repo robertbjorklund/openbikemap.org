@@ -1,16 +1,40 @@
-import type * as maplibregl from "maplibre-gl";
+import maplibregl from "maplibre-gl";
 import {
   getLayoutViewportWidth,
+  getRouteBottomSheetHeightPx,
+  getSidePanelRailWidth,
   isMobileLayout,
   isRouteBottomSheetMode,
   readMobileBottomNavHeightPx,
   readMobileFlyoutBottomSheetHeightPx,
   readRouteBottomSheetHeightPx,
+  sidePanelFlyoutWidthPx,
 } from "../components/sidePanelRailLayout";
 import type { MapFeature } from "../types/FeatureTypes";
 
-/** Bbox center of a line feature — e.g. search or URL deep links without a click point. */
-export function featureFocusLngLat(feature: MapFeature): [number, number] | null {
+const FIT_MARGIN_PX = 48;
+const FIT_TOP_UI_PX = 56;
+const SEARCH_FIT_DURATION_MS = 2000;
+const SEARCH_FIT_MAX_ZOOM_LOCAL = 14;
+/** Below this span (km) cap zoom for short local trails. */
+const SEARCH_FIT_LOCAL_SPAN_KM = 8;
+
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function boundsSpanKilometers(bounds: maplibregl.LngLatBounds): number {
+  const ne = bounds.getNorthEast();
+  const sw = bounds.getSouthWest();
+  const latMid = (ne.lat + sw.lat) / 2;
+  const kmPerDegLat = 111.32;
+  const kmPerDegLng = kmPerDegLat * Math.cos((latMid * Math.PI) / 180);
+  const dLat = Math.abs(ne.lat - sw.lat) * kmPerDegLat;
+  const dLng = Math.abs(ne.lng - sw.lng) * kmPerDegLng;
+  return Math.max(dLat, dLng);
+}
+
+function collectLineCoords(feature: MapFeature): [number, number][] {
   const { geometry } = feature;
   const coords: [number, number][] = [];
 
@@ -26,23 +50,110 @@ export function featureFocusLngLat(feature: MapFeature): [number, number] | null
     }
   }
 
+  return coords;
+}
+
+export function featureLngLatBounds(
+  feature: MapFeature,
+): maplibregl.LngLatBounds | null {
+  const coords = collectLineCoords(feature);
   if (coords.length === 0) {
     return null;
   }
 
-  let minLng = Infinity;
-  let maxLng = -Infinity;
-  let minLat = Infinity;
-  let maxLat = -Infinity;
+  const bounds = new maplibregl.LngLatBounds(coords[0], coords[0]);
+  for (const coord of coords) {
+    bounds.extend(coord);
+  }
+  return bounds;
+}
 
-  for (const [lng, lat] of coords) {
-    minLng = Math.min(minLng, lng);
-    maxLng = Math.max(maxLng, lng);
-    minLat = Math.min(minLat, lat);
-    maxLat = Math.max(maxLat, lat);
+/** Bbox center of a line feature — e.g. search or URL deep links without a click point. */
+export function featureFocusLngLat(feature: MapFeature): [number, number] | null {
+  const bounds = featureLngLatBounds(feature);
+  if (!bounds) {
+    return null;
+  }
+  const center = bounds.getCenter();
+  return [center.lng, center.lat];
+}
+
+export function featureFitGeometryKey(feature: MapFeature): string {
+  const coords = collectLineCoords(feature);
+  return String(coords.length);
+}
+
+export function getMapFitPadding(
+  mapContainer: HTMLElement,
+): maplibregl.PaddingOptions {
+  const viewportWidth = getLayoutViewportWidth();
+
+  if (isMobileLayout(viewportWidth)) {
+    const bottomNav = readMobileBottomNavHeightPx(mapContainer);
+    const bottomSheet = Math.max(
+      readRouteBottomSheetHeightPx(mapContainer),
+      getRouteBottomSheetHeightPx(),
+    );
+    return {
+      top: FIT_MARGIN_PX + FIT_TOP_UI_PX,
+      bottom: bottomSheet + bottomNav + FIT_MARGIN_PX,
+      left: FIT_MARGIN_PX,
+      right: FIT_MARGIN_PX,
+    };
   }
 
-  return [(minLng + maxLng) / 2, (minLat + maxLat) / 2];
+  const leftOverlay =
+    getSidePanelRailWidth(viewportWidth) + sidePanelFlyoutWidthPx(mapContainer);
+
+  return {
+    top: FIT_MARGIN_PX + FIT_TOP_UI_PX,
+    bottom: FIT_MARGIN_PX,
+    left: leftOverlay + FIT_MARGIN_PX,
+    right: FIT_MARGIN_PX,
+  };
+}
+
+/** Pan/zoom so a trail or route fits in the visible map area (search, deep links). */
+export function fitMapToFeature(
+  map: maplibregl.Map,
+  feature: MapFeature,
+  animate = true,
+): boolean {
+  const bounds = featureLngLatBounds(feature);
+  if (!bounds) {
+    return false;
+  }
+
+  const mapContainer = map.getContainer();
+  const padding = getMapFitPadding(mapContainer);
+  const ne = bounds.getNorthEast();
+  const sw = bounds.getSouthWest();
+  const isPointLike =
+    Math.abs(ne.lng - sw.lng) < 1e-9 && Math.abs(ne.lat - sw.lat) < 1e-9;
+
+  if (isPointLike) {
+    const center = bounds.getCenter();
+    map.flyTo({
+      center,
+      zoom: SEARCH_FIT_MAX_ZOOM_LOCAL,
+      duration: animate ? SEARCH_FIT_DURATION_MS : 0,
+      easing: easeInOutCubic,
+    });
+    return true;
+  }
+
+  const spanKm = boundsSpanKilometers(bounds);
+  const fitOptions: maplibregl.FitBoundsOptions = {
+    padding,
+    duration: animate ? SEARCH_FIT_DURATION_MS : 0,
+    easing: easeInOutCubic,
+  };
+  if (spanKm < SEARCH_FIT_LOCAL_SPAN_KM) {
+    fitOptions.maxZoom = SEARCH_FIT_MAX_ZOOM_LOCAL;
+  }
+
+  map.fitBounds(bounds, fitOptions);
+  return true;
 }
 
 const VISIBLE_AREA_MARGIN_PX = 16;

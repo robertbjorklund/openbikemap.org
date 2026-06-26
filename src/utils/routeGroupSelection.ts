@@ -3,7 +3,8 @@ import {
   type MapFeature,
   type RouteFeature,
 } from "../types/FeatureTypes";
-import { routeLinkKeysIntersect } from "./RouteDisplayName";
+import { parseRouteDisplayName, routeLinkKeysIntersect } from "./RouteDisplayName";
+import { getRouteStageNumber } from "./SverigeledenSection";
 import { mergeSegmentGroup } from "./FeatureGroup";
 import type { RouteGroupSelection } from "../components/SelectedObject";
 
@@ -18,12 +19,28 @@ export function buildRouteGroupSelection(
   const groupId = primary.properties.groupId;
   const primaryRoute = primary.properties;
 
-  const stageFeatures = relatedFeatures.filter(
-    (feature): feature is RouteFeature =>
-      feature.properties.type === FeatureType.Route &&
-      !!feature.properties.stageId &&
-      routeLinkKeysIntersect(primaryRoute, feature.properties),
-  );
+  const stageFeatures = relatedFeatures
+    .filter(
+      (feature): feature is RouteFeature =>
+        feature.properties.type === FeatureType.Route &&
+        !!feature.properties.stageId &&
+        (groupId
+          ? feature.properties.groupId === groupId
+          : routeLinkKeysIntersect(primaryRoute, feature.properties)),
+    )
+    .sort((left, right) => {
+      const leftNum =
+        getRouteStageNumber(
+          left.properties,
+          parseRouteDisplayName(left.properties.name),
+        ) ?? Number.MAX_SAFE_INTEGER;
+      const rightNum =
+        getRouteStageNumber(
+          right.properties,
+          parseRouteDisplayName(right.properties.name),
+        ) ?? Number.MAX_SAFE_INTEGER;
+      return leftNum - rightNum;
+    });
 
   const uniqueStageIds = new Set(
     stageFeatures.map((feature) => feature.properties.stageId),

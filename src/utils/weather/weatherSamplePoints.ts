@@ -1,61 +1,49 @@
-import type { LineString, MultiLineString, Position } from "geojson";
+import turfLength from "@turf/length";
+import turfLineSliceAlong from "@turf/line-slice-along";
+import type { Feature, LineString, MultiLineString, Position } from "geojson";
 import { FeatureType, type MapFeature } from "../../types/FeatureTypes";
-import { getFeatureLengthMeters, positionDistanceMeters } from "../Length";
+import { getFeatureLengthMeters } from "../Length";
 import { concatenateLineStrings } from "../geometryElevationPath";
 import type { RouteGroupSelection } from "../../components/SelectedObject";
 import type { WeatherSamplePoint } from "./weatherTypes";
 
-export const WEATHER_SHORT_ROUTE_METERS = 30_000;
-export const WEATHER_MEDIUM_ROUTE_METERS = 150_000;
+export const WEATHER_MAX_ROUTE_METERS = 150_000;
 
-/** Start/end closer than this → one forecast (loops, roundtrips). */
-export const WEATHER_ENDPOINT_NEAR_METERS = 3_000;
-
-function endpointCoords(geometry: LineString | MultiLineString): {
-  start: Position;
-  end: Position;
-} | null {
-  const line = concatenateLineStrings([geometry]);
-  if (!line || line.coordinates.length < 2) {
+function midpointAlongLine(line: LineString): Position | null {
+  if (line.coordinates.length < 2) {
     return null;
   }
-  const coords = line.coordinates;
-  return {
-    start: coords[0],
-    end: coords[coords.length - 1],
+
+  const routeFeature: Feature<LineString> = {
+    type: "Feature",
+    geometry: line,
+    properties: {},
   };
-}
 
-function toSamplePoint(label: string, coord: Position): WeatherSamplePoint {
-  return { label, lat: coord[1], lng: coord[0] };
-}
-
-function isCircularRoute(feature: MapFeature, endpoints: {
-  start: Position;
-  end: Position;
-}): boolean {
-  if (
-    feature.properties.type === FeatureType.Route &&
-    feature.properties.roundtrip === true
-  ) {
-    return true;
+  const lengthKm = turfLength(routeFeature, { units: "kilometers" });
+  if (lengthKm <= 0) {
+    return line.coordinates[0];
   }
 
-  return (
-    positionDistanceMeters(endpoints.start, endpoints.end) <
-    WEATHER_ENDPOINT_NEAR_METERS
-  );
+  const slice = turfLineSliceAlong(routeFeature, 0, lengthKm / 2, {
+    units: "kilometers",
+  });
+  const coords = slice.geometry.coordinates;
+  return coords[coords.length - 1] ?? line.coordinates[0];
 }
 
-function shouldSampleEndPoint(
-  feature: MapFeature,
-  lengthMeters: number,
-  endpoints: { start: Position; end: Position },
-): boolean {
-  if (lengthMeters < WEATHER_SHORT_ROUTE_METERS) {
-    return false;
+function midpointCoord(
+  geometry: LineString | MultiLineString,
+): Position | null {
+  const line = concatenateLineStrings([geometry]);
+  if (!line) {
+    return null;
   }
-  return !isCircularRoute(feature, endpoints);
+  return midpointAlongLine(line);
+}
+
+function toSamplePoint(coord: Position): WeatherSamplePoint {
+  return { label: "", lat: coord[1], lng: coord[0] };
 }
 
 /** Hide weather on multi-stage route overview (e.g. Sverigeleden). */
@@ -76,24 +64,17 @@ export function shouldShowFeatureWeather(
   }
 
   const lengthMeters = getFeatureLengthMeters(feature) ?? 0;
-  return lengthMeters < WEATHER_MEDIUM_ROUTE_METERS;
+  return lengthMeters < WEATHER_MAX_ROUTE_METERS;
 }
 
-/** Forecast sample location(s) from route/trail length. */
+/** One forecast at the lengthwise midpoint of the feature geometry. */
 export function getWeatherSamplePoints(
   feature: MapFeature,
 ): WeatherSamplePoint[] {
-  const endpoints = endpointCoords(feature.geometry);
-  if (!endpoints) {
+  const coord = midpointCoord(feature.geometry);
+  if (!coord) {
     return [];
   }
 
-  const lengthMeters = getFeatureLengthMeters(feature) ?? 0;
-  const points = [toSamplePoint("Start", endpoints.start)];
-
-  if (shouldSampleEndPoint(feature, lengthMeters, endpoints)) {
-    points.push(toSamplePoint("End", endpoints.end));
-  }
-
-  return points;
+  return [toSamplePoint(coord)];
 }

@@ -1,12 +1,13 @@
 import type { RouteProperties } from "../types/FeatureTypes";
+import {
+  getSverigeledenSectionForRoute,
+  type RouteStageParse,
+} from "./SverigeledenSection";
 
 export type QualifierKind = "annotation" | "stageRef" | "leg" | null;
 
-export interface ParsedRouteDisplayName {
+export interface ParsedRouteDisplayName extends RouteStageParse {
   base: string | null;
-  qualifier: string | null;
-  qualifierKind: QualifierKind;
-  effectiveName: string | null;
 }
 
 const ANNOTATION_WORDS = new Set([
@@ -114,6 +115,10 @@ function routeNetworkKey(network: string | null | undefined): string {
   return network?.trim().toLowerCase() || "none";
 }
 
+function routeScopeKey(properties: RouteProperties): string {
+  return `${properties.osmRouteType ?? "bicycle"}:${routeNetworkKey(properties.network)}`;
+}
+
 function isDistinctEffectiveName(
   parsed: ParsedRouteDisplayName | null,
 ): parsed is ParsedRouteDisplayName & { effectiveName: string } {
@@ -128,7 +133,8 @@ function isDistinctEffectiveName(
 /** Keep in sync with openbikedata-processor/src/transforms/RouteDisplayName.ts */
 export function getRouteLinkKeys(properties: RouteProperties): string[] {
   const keys: string[] = [];
-  const net = routeNetworkKey(properties.network);
+  const net = routeScopeKey(properties);
+  const networkOnly = routeNetworkKey(properties.network);
   const parsed = parseRouteDisplayName(properties.name);
   const refNorm = properties.ref?.trim()
     ? normalizeRouteRef(properties.ref)
@@ -136,13 +142,17 @@ export function getRouteLinkKeys(properties: RouteProperties): string[] {
   const distinctName = isDistinctEffectiveName(parsed);
 
   if (refNorm) {
-    const isIcnNcn = net === "icn" || net === "ncn";
+    const isIcnNcn = networkOnly === "icn" || networkOnly === "ncn";
     if (isIcnNcn) {
-      keys.push(`ref:${net}:${refNorm}`);
+      if (distinctName) {
+        keys.push(`ref:${net}:${refNorm}:${parsed.effectiveName}`);
+      } else {
+        keys.push(`ref:${net}:${refNorm}`);
+      }
     } else if (parsed?.qualifierKind === "stageRef") {
       keys.push(`ref:${net}:${refNorm}`);
     } else if (parsed?.qualifierKind === "leg") {
-      // legs are not merged by ref alone
+      // R1b — legs are not merged by ref alone
     } else if (distinctName) {
       keys.push(`ref:${net}:${refNorm}:${parsed.effectiveName}`);
     } else {
@@ -159,7 +169,15 @@ export function getRouteLinkKeys(properties: RouteProperties): string[] {
   }
 
   if (distinctName) {
-    keys.push(`name:${net}:${parsed.effectiveName}`);
+    const sverigeledenSection = getSverigeledenSectionForRoute(
+      properties,
+      parsed,
+    );
+    if (sverigeledenSection) {
+      keys.push(`name:${net}:sverigeleden:${sverigeledenSection}`);
+    } else {
+      keys.push(`name:${net}:${parsed.effectiveName}`);
+    }
   }
 
   if (parsed?.qualifierKind === "leg" && parsed.base && parsed.qualifier) {
