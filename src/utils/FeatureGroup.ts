@@ -194,7 +194,7 @@ export function mergeSegmentGroup(
           totalLength > 0 ? totalLength : primary.properties.lengthMeters,
         elevationProfile: mergeElevation
           ? mergeElevationProfilesFromFeatures(uniqueSegments)
-          : null,
+          : primary.properties.elevationProfile,
       },
     };
   }
@@ -206,7 +206,7 @@ export function mergeSegmentGroup(
       ...primary.properties,
       elevationProfile: mergeElevation
         ? mergeElevationProfilesFromFeatures(uniqueSegments)
-        : null,
+        : primary.properties.elevationProfile,
     },
   };
 }

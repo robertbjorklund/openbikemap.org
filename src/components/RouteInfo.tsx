@@ -202,7 +202,7 @@ function RouteInfoBody({
         </FeatureDetailStat>
       )}
 
-      {!compactMobile && !(routeGroup && !routeGroup.activeStageId) && (
+      {!compactMobile && (
         <ElevationStats feature={feature} map={map} />
       )}
 

@@ -64,15 +64,11 @@ function buildDisplayFeature(
               feature.properties.stageId === stageId,
           );
           if (stagePeers.length > 1) {
-            return mergeSegmentGroup(primary, stagePeers, {
-              mergeElevation: false,
-            });
+            return mergeSegmentGroup(primary, stagePeers);
           }
           return primary;
         }
-        return mergeSegmentGroup(primary, groupMembers, {
-          mergeElevation: false,
-        });
+        return mergeSegmentGroup(primary, groupMembers);
       }
       return mergeSegmentGroup(primary, groupMembers);
     }
@@ -426,11 +422,15 @@ export default class StateReducer implements EventBus {
         apiFeature,
       );
 
+      const routeGroup = buildRouteGroupSelection(apiFeature, fullRelated);
+
       this.update({
         selectedObject: {
           ...this._state.selectedObject!,
-          feature: buildDisplayFeature(apiFeature, fullRelated),
-          routeGroup: buildRouteGroupSelection(apiFeature, fullRelated),
+          feature: routeGroup
+            ? routeGroup.wholeRouteFeature
+            : buildDisplayFeature(apiFeature, fullRelated),
+          routeGroup,
         },
       });
       return;

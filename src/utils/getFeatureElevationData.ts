@@ -23,8 +23,12 @@ export function getFeatureElevationData(
     return null;
   }
 
-  const profileGeometry = getProfileGeometry(geometryLine, profile);
-  return getElevationData(profileGeometry);
+  try {
+    const profileGeometry = getProfileGeometry(geometryLine, profile);
+    return getElevationData(profileGeometry);
+  } catch {
+    return null;
+  }
 }
 
 export function getFeatureElevationDisplayLine(
